@@ -86,6 +86,10 @@ def main():
     parser.add_argument("--write_vtu_point_cloud", action="store_true", help="Write a VTU point cloud of |B| from coil filaments.")
     parser.add_argument("--vtu_n", type=int, default=14, help="Resolution per axis for VTU point cloud (N^3 points).")
     parser.add_argument("--vtu_margin", type=float, default=0.6, help="Bounding-box margin (meters) for VTU point cloud.")
+    parser.add_argument("--no_figures", action="store_true", help="Skip writing matplotlib figures.")
+    parser.add_argument("--no_vtk", action="store_true", help="Skip writing ParaView VTK files.")
+    parser.add_argument("--no_coils", action="store_true", help="Skip coil cutting (and thus coils.* output).")
+    parser.add_argument("--no_fieldlines", action="store_true", help="Skip coil-only field line tracing.")
     args = parser.parse_args()
 
     if netCDF4 is None:  # pragma: no cover
@@ -109,8 +113,10 @@ def main():
     out_dir = input_path.parent
     fig_dir = out_dir / f"figures_{case}"
     vtk_dir = out_dir / f"vtk_{case}"
-    fig_dir.mkdir(exist_ok=True)
-    vtk_dir.mkdir(exist_ok=True)
+    if not args.no_figures:
+        fig_dir.mkdir(exist_ok=True)
+    if not args.no_vtk:
+        vtk_dir.mkdir(exist_ok=True)
 
     # ----------------------------
     # Read output netCDF
@@ -150,70 +156,71 @@ def main():
     # ----------------------------
     # Figures
     # ----------------------------
-    plt = _setup_matplotlib()
+    if not args.no_figures:
+        plt = _setup_matplotlib()
 
-    # Lambda scan
-    fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    ax.semilogx(lambdas, max_K, "-o", label=r"$\\max |K|$")
-    ax2 = ax.twinx()
-    ax2.semilogx(lambdas, max_B, "-s", color="C1", label=r"$\\max |B_n|$")
-    ax.set_xlabel(r"$\\lambda$")
-    ax.set_ylabel(r"$\\max |K|$")
-    ax2.set_ylabel(r"$\\max |B_n|$")
-    ax.axvline(lambdas[ilam], color="k", alpha=0.3, linestyle="--", linewidth=1)
-    ax.set_title(f"Lambda scan ({case})")
-    # Combined legend
-    h1, l1 = ax.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    ax.legend(h1 + h2, l1 + l2, loc="best")
-    fig.tight_layout()
-    fig.savefig(fig_dir / "lambda_scan.png")
-    plt.close(fig)
+        # Lambda scan
+        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        ax.semilogx(lambdas, max_K, "-o", label=r"$\\max |K|$")
+        ax2 = ax.twinx()
+        ax2.semilogx(lambdas, max_B, "-s", color="C1", label=r"$\\max |B_n|$")
+        ax.set_xlabel(r"$\\lambda$")
+        ax.set_ylabel(r"$\\max |K|$")
+        ax2.set_ylabel(r"$\\max |B_n|$")
+        ax.axvline(lambdas[ilam], color="k", alpha=0.3, linestyle="--", linewidth=1)
+        ax.set_title(f"Lambda scan ({case})")
+        # Combined legend
+        h1, l1 = ax.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax.legend(h1 + h2, l1 + l2, loc="best")
+        fig.tight_layout()
+        fig.savefig(fig_dir / "lambda_scan.png")
+        plt.close(fig)
 
-    # Bnormal map
-    fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    im = ax.pcolormesh(zeta_p, theta_p, Btot[ilam].T, shading="auto")
-    fig.colorbar(im, ax=ax, label=r"$B_n$")
-    ax.set_xlabel(r"$\\zeta$")
-    ax.set_ylabel(r"$\\theta$")
-    ax.set_title(f"$B_n$ on plasma (lambda idx {ilam})")
-    fig.tight_layout()
-    fig.savefig(fig_dir / "Bnormal_plasma.png")
-    plt.close(fig)
+        # Bnormal map
+        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        im = ax.pcolormesh(zeta_p, theta_p, Btot[ilam].T, shading="auto")
+        fig.colorbar(im, ax=ax, label=r"$B_n$")
+        ax.set_xlabel(r"$\\zeta$")
+        ax.set_ylabel(r"$\\theta$")
+        ax.set_title(f"$B_n$ on plasma (lambda idx {ilam})")
+        fig.tight_layout()
+        fig.savefig(fig_dir / "Bnormal_plasma.png")
+        plt.close(fig)
 
-    # K map
-    fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    Kmag = np.sqrt(K2[ilam])
-    im = ax.pcolormesh(zeta_c, theta_c, Kmag.T, shading="auto")
-    fig.colorbar(im, ax=ax, label=r"$|K|$")
-    ax.set_xlabel(r"$\\zeta$")
-    ax.set_ylabel(r"$\\theta$")
-    ax.set_title(f"$|K|$ on coil (lambda idx {ilam})")
-    fig.tight_layout()
-    fig.savefig(fig_dir / "K_coil.png")
-    plt.close(fig)
+        # K map
+        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        Kmag = np.sqrt(K2[ilam])
+        im = ax.pcolormesh(zeta_c, theta_c, Kmag.T, shading="auto")
+        fig.colorbar(im, ax=ax, label=r"$|K|$")
+        ax.set_xlabel(r"$\\zeta$")
+        ax.set_ylabel(r"$\\theta$")
+        ax.set_title(f"$|K|$ on coil (lambda idx {ilam})")
+        fig.tight_layout()
+        fig.savefig(fig_dir / "K_coil.png")
+        plt.close(fig)
 
-    # Current potential + contours used for coil cutting
-    fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    im = ax.pcolormesh(zeta_c, theta_c, Phi[ilam].T, shading="auto")
-    fig.colorbar(im, ax=ax, label=r"$\\Phi$ [A]")
-    # Overlay the contour levels used for coil cutting (for pedagogy).
-    try:
-        data = Phi[ilam].copy()
-        if abs(net_pol) > np.finfo(float).eps:
-            data = data / net_pol * nfp
-        nlevels = int(2 * int(args.coils_per_half_period))
-        levels = np.linspace(0.0, 1.0, nlevels, endpoint=False)
-        levels = levels + (levels[1] - levels[0]) / 2.0
-        ax.contour(zeta_c, theta_c, data.T, levels=levels, colors="k", linewidths=0.6, alpha=0.6)
-    except Exception:
-        pass
-    ax.set_xlabel(r"$\\zeta$")
-    ax.set_ylabel(r"$\\theta$")
-    ax.set_title(f"Current potential on coil (lambda idx {ilam})")
-    fig.tight_layout()
-    fig.savefig(fig_dir / "current_potential.png")
-    plt.close(fig)
+        # Current potential + contours used for coil cutting
+        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        im = ax.pcolormesh(zeta_c, theta_c, Phi[ilam].T, shading="auto")
+        fig.colorbar(im, ax=ax, label=r"$\\Phi$ [A]")
+        # Overlay the contour levels used for coil cutting (for pedagogy).
+        try:
+            data = Phi[ilam].copy()
+            if abs(net_pol) > np.finfo(float).eps:
+                data = data / net_pol * nfp
+            nlevels = int(2 * int(args.coils_per_half_period))
+            levels = np.linspace(0.0, 1.0, nlevels, endpoint=False)
+            levels = levels + (levels[1] - levels[0]) / 2.0
+            ax.contour(zeta_c, theta_c, data.T, levels=levels, colors="k", linewidths=0.6, alpha=0.6)
+        except Exception:
+            pass
+        ax.set_xlabel(r"$\\zeta$")
+        ax.set_ylabel(r"$\\theta$")
+        ax.set_title(f"Current potential on coil (lambda idx {ilam})")
+        fig.tight_layout()
+        fig.savefig(fig_dir / "current_potential.png")
+        plt.close(fig)
 
     # ----------------------------
     # Cut coils (filaments) and write MAKECOIL file
@@ -228,24 +235,31 @@ def main():
         write_vtu_point_cloud,
     )
 
-    coils = cut_coils_from_current_potential(
-        current_potential_zt=Phi[ilam],
-        theta=theta_c,
-        zeta=zeta_c,
-        r_coil_zt3_full=r_coil,
-        theta_shift=int(args.theta_shift),
-        coils_per_half_period=int(args.coils_per_half_period),
-        nfp=int(nfp),
-        net_poloidal_current_Amperes=float(net_pol),
-    )
+    coils = None
+    if not args.no_coils:
+        coils = cut_coils_from_current_potential(
+            current_potential_zt=Phi[ilam],
+            theta=theta_c,
+            zeta=zeta_c,
+            r_coil_zt3_full=r_coil,
+            theta_shift=int(args.theta_shift),
+            coils_per_half_period=int(args.coils_per_half_period),
+            nfp=int(nfp),
+            net_poloidal_current_Amperes=float(net_pol),
+        )
 
-    coils_path = out_dir / f"coils.{case}"
-    write_makecoil_filaments(coils_path, filaments_xyz=coils.filaments_xyz, coil_current=coils.coil_current, nfp=nfp)
-    print("[postprocess] wrote:", coils_path)
+        coils_path = out_dir / f"coils.{case}"
+        write_makecoil_filaments(coils_path, filaments_xyz=coils.filaments_xyz, coil_current=coils.coil_current, nfp=nfp)
+        print("[postprocess] wrote:", coils_path)
 
     # ----------------------------
     # VTK: surfaces
     # ----------------------------
+    if args.no_vtk:
+        if args.no_figures:
+            print("[postprocess] nothing to do (both --no_figures and --no_vtk were set).")
+        return
+
     # Replicate 1-field-period scalar fields across all periods for surface visualization.
     nzeta = zeta_c.size
     nzetal = r_coil.shape[0]
@@ -302,60 +316,65 @@ def main():
     # ----------------------------
     # VTK: coil filaments
     # ----------------------------
-    pts_all = []
-    lines = []
-    offset = 0
-    for filament in coils.filaments_xyz:
-        filament = np.asarray(filament, dtype=float)
-        n = filament.shape[0]
-        pts_all.append(filament)
-        # Close the loop explicitly for visualization.
-        idxs = list(range(offset, offset + n)) + [offset]
-        lines.append(idxs)
-        offset += n
+    if coils is not None:
+        pts_all = []
+        lines = []
+        offset = 0
+        for filament in coils.filaments_xyz:
+            filament = np.asarray(filament, dtype=float)
+            n = filament.shape[0]
+            pts_all.append(filament)
+            # Close the loop explicitly for visualization.
+            idxs = list(range(offset, offset + n)) + [offset]
+            lines.append(idxs)
+            offset += n
 
-    pts_all = np.concatenate(pts_all, axis=0)
-    write_vtp_polydata(vtk_dir / "coils.vtp", points=pts_all, lines=lines)
+        pts_all = np.concatenate(pts_all, axis=0)
+        write_vtp_polydata(vtk_dir / "coils.vtp", points=pts_all, lines=lines)
 
     # ----------------------------
     # Field lines (coil-only field from filaments)
     # ----------------------------
-    field = build_filament_field(filaments_xyz=coils.filaments_xyz, coil_current=coils.coil_current)
+    field = None
+    if coils is not None and (not args.no_fieldlines):
+        field = build_filament_field(filaments_xyz=coils.filaments_xyz, coil_current=coils.coil_current)
 
-    # Start points: choose points on the plasma surface (zeta index 0), offset outward along the normal.
-    starts = []
-    iz = 0
-    for k in range(int(args.fieldline_count)):
-        it = int(round(k * (theta_p.size / args.fieldline_count))) % theta_p.size
-        x = r_plasma[iz, it]
-        nvec = normal_plasma[iz, it]
-        nhat = nvec / (np.linalg.norm(nvec) + 1e-300)
-        starts.append(x + float(args.fieldline_offset) * nhat)
-    starts = np.asarray(starts, dtype=float)
+        # Start points: choose points on the plasma surface (zeta index 0), offset outward along the normal.
+        starts = []
+        iz = 0
+        for k in range(int(args.fieldline_count)):
+            it = int(round(k * (theta_p.size / args.fieldline_count))) % theta_p.size
+            x = r_plasma[iz, it]
+            nvec = normal_plasma[iz, it]
+            nhat = nvec / (np.linalg.norm(nvec) + 1e-300)
+            starts.append(x + float(args.fieldline_offset) * nhat)
+        starts = np.asarray(starts, dtype=float)
 
-    flines = trace_fieldlines(
-        field,
-        starts=starts,
-        ds=float(args.fieldline_ds),
-        n_steps=int(args.fieldline_steps),
-        stop_radius=10.0,
-    )
+        flines = trace_fieldlines(
+            field,
+            starts=starts,
+            ds=float(args.fieldline_ds),
+            n_steps=int(args.fieldline_steps),
+            stop_radius=10.0,
+        )
 
-    pts_all = []
-    lines = []
-    offset = 0
-    for line in flines:
-        n = line.shape[0]
-        pts_all.append(line)
-        lines.append(list(range(offset, offset + n)))
-        offset += n
-    pts_all = np.concatenate(pts_all, axis=0) if pts_all else np.zeros((0, 3))
-    write_vtp_polydata(vtk_dir / "fieldlines.vtp", points=pts_all, lines=lines)
+        pts_all = []
+        lines = []
+        offset = 0
+        for line in flines:
+            n = line.shape[0]
+            pts_all.append(line)
+            lines.append(list(range(offset, offset + n)))
+            offset += n
+        pts_all = np.concatenate(pts_all, axis=0) if pts_all else np.zeros((0, 3))
+        write_vtp_polydata(vtk_dir / "fieldlines.vtp", points=pts_all, lines=lines)
 
     # ----------------------------
     # Optional VTU point cloud (|B| in a 3D box), coil-filament field only
     # ----------------------------
     if args.write_vtu_point_cloud:
+        if field is None:
+            raise SystemExit("--write_vtu_point_cloud requires coil cutting + field evaluation (do not set --no_coils).")
         n = int(args.vtu_n)
         margin = float(args.vtu_margin)
         pts = r_plasma.reshape(-1, 3)
@@ -375,7 +394,8 @@ def main():
         )
 
     print("[postprocess] wrote VTK:", vtk_dir)
-    print("[postprocess] wrote figures:", fig_dir)
+    if not args.no_figures:
+        print("[postprocess] wrote figures:", fig_dir)
 
 
 if __name__ == "__main__":

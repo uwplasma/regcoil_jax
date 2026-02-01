@@ -11,6 +11,15 @@ The repository includes a pedagogic postprocessing script that generates figures
   python examples/3_advanced/postprocess_make_figures_and_vtk.py --run \\
     --input examples/3_advanced/regcoil_in.lambda_search_1
 
+You can disable figure or VTK output independently:
+
+::
+
+  python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --no_figures \\
+    --input examples/3_advanced/regcoil_in.lambda_search_1
+  python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --no_vtk \\
+    --input examples/3_advanced/regcoil_in.lambda_search_1
+
 It writes:
 
 - ``figures_<case>/``: PNG figures (lambda scan, 2D maps of :math:`B_n`, :math:`|K|`, and :math:`\\Phi`)
@@ -22,6 +31,13 @@ Optimization example figures
 The autodiff example ``examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py`` writes:
 
 - ``outputs_optimize_coil_radius/``: PNG optimization-history figures and ``.vts`` winding-surface snapshots (initial/final).
+
+You can disable outputs:
+
+::
+
+  python examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py --no_figures
+  python examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py --no_vtk
 
 VTK / ParaView
 --------------

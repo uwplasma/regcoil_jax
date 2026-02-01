@@ -23,6 +23,13 @@ Postprocess into figures + ParaView files (coil cutting + field lines):
 python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/3_advanced/regcoil_in.lambda_search_1
 ```
 
+Disable figures or ParaView outputs:
+
+```bash
+python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --no_figures --input examples/3_advanced/regcoil_in.lambda_search_1
+python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --no_vtk --input examples/3_advanced/regcoil_in.lambda_search_1
+```
+
 Optional: include a 3D VTU point cloud of the coil-filament field magnitude:
 
 ```bash
@@ -46,6 +53,7 @@ python examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py
 - ✅ Key scalar arrays (`lambda`, `chi2_B`, `chi2_K`, `max_Bnormal`, `max_K`) match the reference Fortran REGCOIL outputs for these cases.
 - ✅ Supports `load_bnorm=.true.` (BNORM file) to include a nonzero `Bnormal_from_plasma_current`.
 - ✅ Supports `regularization_term_option` in `{ "chi2_K", "K_xy", "Laplace-Beltrami" }` (see `docs/theory.rst`).
+- ✅ Additional geometry options: plasma `geometry_option_plasma` in `{0,1,2,3,6,7}` and coil `geometry_option_coil` in `{0,1,2,3,4}`.
 - ✅ Includes pytest regression tests (`tests/`) with stored Fortran baselines.
 - ✅ Includes a coil-cutting + VTK postprocessing example (`docs/visualization.rst`).
 

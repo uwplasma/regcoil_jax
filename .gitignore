@@ -17,4 +17,4 @@ examples/**/regcoil_out*.log
 examples/**/figures_*/
 examples/**/vtk_*/
 examples/**/coils.*
-examples/**/outputs_optimize_coil_radius/
+examples/**/outputs_*/

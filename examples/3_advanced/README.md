@@ -18,3 +18,9 @@ Larger showcase case (not CI-tested):
 Postprocessing:
 - `postprocess_make_figures_and_vtk.py`: generates publication-ready figures and ParaView `.vtp` files
   (winding surface, plasma surface, cut coils, and filament field lines), plus optional `.vts`/`.vtu` outputs.
+
+Postprocess toggles:
+- Skip figures: `--no_figures`
+- Skip ParaView outputs: `--no_vtk`
+- Skip coil cutting: `--no_coils`
+- Skip field line tracing: `--no_fieldlines`

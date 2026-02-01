@@ -1,0 +1,36 @@
+! Intermediate CLI example: slightly larger torus run + Laplace–Beltrami regularization.
+! Intended to be run via:
+!   regcoil_jax --platform cpu --verbose examples/2_intermediate/regcoil_in.torus_cli_intermediate
+!
+! Optional figures/VTK (including coil cutting) via the shared postprocess script:
+!   python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/2_intermediate/regcoil_in.torus_cli_intermediate
+
+&regcoil_nml
+  nlambda = 6
+  lambda_min = 1e-18
+  lambda_max = 1e-8
+
+  ntheta_plasma = 48
+  nzeta_plasma  = 48
+  ntheta_coil   = 48
+  nzeta_coil    = 48
+
+  mpol_potential = 10
+  ntor_potential = 10
+
+  geometry_option_plasma = 1
+  R0_plasma = 3.0
+  a_plasma = 1.0
+  nfp_imposed = 1
+
+  geometry_option_coil = 1
+  R0_coil = 3.0
+  a_coil = 1.7
+
+  net_poloidal_current_amperes = 1.4
+  net_toroidal_current_amperes = 0.3
+
+  symmetry_option = 3
+  regularization_term_option = "Laplace-Beltrami"
+/
+

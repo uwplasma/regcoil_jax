@@ -40,6 +40,8 @@ def main():
     parser.add_argument("--out_dir", type=str, default="examples/2_intermediate/outputs_optimize_coil_radius")
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--lr", type=float, default=5e-2)
+    parser.add_argument("--no_figures", action="store_true", help="Skip writing matplotlib figures.")
+    parser.add_argument("--no_vtk", action="store_true", help="Skip writing ParaView VTK files.")
     args = parser.parse_args()
 
     jax.config.update("jax_enable_x64", True)
@@ -118,22 +120,25 @@ def main():
         hist_val.append(float(val))
         hist_grad.append(float(g))
 
-    # Write simple VTK surfaces (before/after) for ParaView.
-    nfp = int(nfp)
-    theta = (2.0 * jnp.pi) * jnp.arange(ntheta) / ntheta
-    zeta = (2.0 * jnp.pi / nfp) * jnp.arange(nzeta) / nzeta
+    if not args.no_vtk:
+        # Write simple VTK surfaces (before/after) for ParaView.
+        nfp = int(nfp)
+        theta = (2.0 * jnp.pi) * jnp.arange(ntheta) / ntheta
+        zeta = (2.0 * jnp.pi / nfp) * jnp.arange(nzeta) / nzeta
 
-    def _torus_points(a_coil: float):
-        r, *_ = torus_xyz_and_derivs(theta, zeta, R0_coil, jnp.asarray(a_coil))
-        # r is (3,T,Z); convert to (Z,T,3) for VTS writer.
-        r_tz3 = jnp.moveaxis(r, 0, -1)  # (T,Z,3)
-        r_zt3 = jnp.transpose(r_tz3, (1, 0, 2))  # (Z,T,3)
-        return jnp.asarray(r_zt3)
+        def _torus_points(a_coil: float):
+            r, *_ = torus_xyz_and_derivs(theta, zeta, R0_coil, jnp.asarray(a_coil))
+            # r is (3,T,Z); convert to (Z,T,3) for VTS writer.
+            r_tz3 = jnp.moveaxis(r, 0, -1)  # (T,Z,3)
+            r_zt3 = jnp.transpose(r_tz3, (1, 0, 2))  # (Z,T,3)
+            return jnp.asarray(r_zt3)
 
-    write_vts_structured_grid(out_dir / "coil_surface_init.vts", points_zt3=_torus_points(hist_a[0]))
-    write_vts_structured_grid(out_dir / "coil_surface_final.vts", points_zt3=_torus_points(hist_a[-1]))
+        write_vts_structured_grid(out_dir / "coil_surface_init.vts", points_zt3=_torus_points(hist_a[0]))
+        write_vts_structured_grid(out_dir / "coil_surface_final.vts", points_zt3=_torus_points(hist_a[-1]))
 
     # Plot optimization history if matplotlib is available.
+    if args.no_figures:
+        return
     try:
         import matplotlib
 

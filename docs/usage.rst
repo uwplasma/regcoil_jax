@@ -12,8 +12,22 @@ The Fortran REGCOIL namelist has many options; this parity-first port currently 
 commonly-used keys:
 
 - ``regularization_term_option``: ``"chi2_K"`` (default), ``"K_xy"``, or ``"Laplace-Beltrami"``
-- ``geometry_option_plasma``: ``1`` (analytic torus) or ``2`` (VMEC boundary)
-- ``geometry_option_coil``: ``1`` (analytic torus), ``2`` (VMEC offset surface), or ``3`` (NESCOIL ``nescin`` winding surface)
+- ``geometry_option_plasma``:
+
+  - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
+  - ``1``: analytic circular torus (``R0_plasma``, ``a_plasma``, ``nfp_imposed``)
+  - ``2``: VMEC boundary (outermost full radial grid point)
+  - ``3``: VMEC boundary (outermost half radial grid point, approximated by averaging the last two full-grid surfaces)
+  - ``6``: Fourier coefficient table (``shape_filename_plasma``)
+  - ``7``: FOCUS ``rdsurf`` boundary file (``shape_filename_plasma``; may embed Bn coefficients)
+
+- ``geometry_option_coil``:
+
+  - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
+  - ``1``: analytic circular torus (``R0_coil``, ``a_coil``)
+  - ``2``: uniform offset from VMEC plasma boundary (``separation``; Fourier-fit controlled by ``max_mpol_coil``/``max_ntor_coil`` and filters)
+  - ``3``: winding surface read from a NESCOIL ``nescin`` file (``nescin_filename``)
+  - ``4``: constant-arclength theta coordinate on an offset-from-VMEC winding surface (``separation`` and ``constant_arclength_tolerance``)
 - ``general_option=5``: lambda search (see the ``examples/3_advanced`` inputs)
 
 Lambda search targets
