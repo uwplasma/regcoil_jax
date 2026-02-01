@@ -4,8 +4,8 @@ import jax.numpy as jnp
 import numpy as np
 
 from .grids import theta_grid, zeta_grid
-from .geometry_torus import torus_xyz_and_derivs
-from .geometry_fourier import FourierSurface, eval_surface_xyz_and_derivs
+from .geometry_torus import torus_xyz_and_derivs2
+from .geometry_fourier import FourierSurface, eval_surface_xyz_and_derivs2
 from .offset_surface import offset_surface_point
 from .modes import init_fourier_modes
 from .surface_metrics import metrics_and_normals
@@ -34,21 +34,24 @@ def plasma_surface_from_inputs(inputs, vmec_boundary: FourierSurface | None):
 
     if gopt_eff == 1:
         R0 = float(inputs["r0_plasma"]); a = float(inputs["a_plasma"])
-        r, rth, rze, nunit, normN = torus_xyz_and_derivs(th, ze, R0, a)
+        r, rth, rze, rtt, rtz, rzz, nunit, normN = torus_xyz_and_derivs2(th, ze, R0, a)
     elif gopt_eff == 2:
         if vmec_boundary is None:
             raise ValueError("geometry_option_plasma=2 requires wout_filename / VMEC boundary.")
         # vmec_boundary already in jnp and has xn multiplied by nfp? in our loader it's not yet, do here:
         s = vmec_boundary
         # eval returns (T,Z,3)
-        xyz, dth, dze = eval_surface_xyz_and_derivs(s, th, ze)
+        xyz, dth, dze, d2th2, d2thze, d2ze2 = eval_surface_xyz_and_derivs2(s, th, ze)
         r = _to_3TZ(xyz)
         rth = _to_3TZ(dth)
         rze = _to_3TZ(dze)
+        rtt = _to_3TZ(d2th2)
+        rtz = _to_3TZ(d2thze)
+        rzz = _to_3TZ(d2ze2)
         _,_,_, nunit, normN = metrics_and_normals(rth, rze)
     else:
         raise NotImplementedError(f"geometry_option_plasma={gopt} not implemented yet (only 0,1,2).")
-    return dict(nfp=nfp, theta=th, zeta=ze, r=r, rth=rth, rze=rze, nunit=nunit, normN=normN)
+    return dict(nfp=nfp, theta=th, zeta=ze, r=r, rth=rth, rze=rze, rtt=rtt, rtz=rtz, rzz=rzz, nunit=nunit, normN=normN)
 
 def coil_surface_from_inputs(inputs, plasma, vmec_boundary: FourierSurface | None):
     ntheta = int(inputs["ntheta_coil"]); nzeta = int(inputs["nzeta_coil"])
@@ -70,7 +73,7 @@ def coil_surface_from_inputs(inputs, plasma, vmec_boundary: FourierSurface | Non
 
     if gopt_eff == 1:
         R0 = float(inputs["r0_coil"]); a = float(inputs["a_coil"])
-        r, rth, rze, nunit, normN = torus_xyz_and_derivs(th, ze, R0, a)
+        r, rth, rze, rtt, rtz, rzz, nunit, normN = torus_xyz_and_derivs2(th, ze, R0, a)
     elif gopt_eff == 2:
         if vmec_boundary is None:
             raise ValueError("geometry_option_coil=2 requires plasma surface from VMEC.")
@@ -148,11 +151,14 @@ def coil_surface_from_inputs(inputs, plasma, vmec_boundary: FourierSurface | Non
             zmnc=zmnc,
         )
 
-        xyz, dth_xyz, dze_xyz = eval_surface_xyz_and_derivs(coil_surf, th, ze)
+        xyz, dth_xyz, dze_xyz, d2th2, d2thze, d2ze2 = eval_surface_xyz_and_derivs2(coil_surf, th, ze)
         r = _to_3TZ(xyz)
         rth = _to_3TZ(dth_xyz)
         rze = _to_3TZ(dze_xyz)
+        rtt = _to_3TZ(d2th2)
+        rtz = _to_3TZ(d2thze)
+        rzz = _to_3TZ(d2ze2)
         _, _, _, nunit, normN = metrics_and_normals(rth, rze)
     else:
         raise NotImplementedError(f"geometry_option_coil={gopt} not implemented yet (only 0,1,2).")
-    return dict(theta=th, zeta=ze, r=r, rth=rth, rze=rze, nunit=nunit, normN=normN)
+    return dict(theta=th, zeta=ze, r=r, rth=rth, rze=rze, rtt=rtt, rtz=rtz, rzz=rzz, nunit=nunit, normN=normN)

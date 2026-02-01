@@ -50,18 +50,26 @@ def build_matrices(inputs, plasma, coil):
     #   - Laplace–Beltrami regularization option
     #   - diagnostics chi2_Laplace_Beltrami
     #
-    # We compute them unconditionally to match the Fortran structure.
+    # We compute them unconditionally to match the Fortran structure. For parity, prefer
+    # analytic 2nd derivatives if they are available (VMEC/Fourier surfaces); otherwise
+    # fall back to spectral differentiation on the (theta,zeta) grid.
     rth = coil["rth"]
     rze = coil["rze"]
-    d2rdtheta2 = deriv_theta(rth)
-    d2rdthetadzeta = deriv_zeta(rth, nfp=nfp)
-    d2rdzeta2 = deriv_zeta(rze, nfp=nfp)
+    if "rtt" in coil and "rtz" in coil and "rzz" in coil:
+        d2rdtheta2 = coil["rtt"]
+        d2rdthetadzeta = coil["rtz"]
+        d2rdzeta2 = coil["rzz"]
+    else:
+        d2rdtheta2 = deriv_theta(rth)
+        d2rdthetadzeta = deriv_zeta(rth, nfp=nfp)
+        d2rdzeta2 = deriv_zeta(rze, nfp=nfp)
 
+    # Use the same formulas as regcoil_build_matrices.f90 (variable naming follows Fortran).
     d_g_theta_theta_d_theta = 2.0 * jnp.sum(d2rdtheta2 * rth, axis=0)
     d_g_theta_theta_d_zeta = 2.0 * jnp.sum(d2rdthetadzeta * rth, axis=0)
 
     d_g_theta_zeta_d_theta = jnp.sum(d2rdtheta2 * rze + d2rdthetadzeta * rth, axis=0)
-    d_g_theta_zeta_d_zeta = jnp.sum(d2rdzeta2 * rth + d2rdthetadzeta * rze, axis=0)
+    d_g_theta_zeta_d_zeta = jnp.sum(d2rdthetadzeta * rze + d2rdzeta2 * rth, axis=0)
 
     d_g_zeta_zeta_d_theta = 2.0 * jnp.sum(d2rdthetadzeta * rze, axis=0)
     d_g_zeta_zeta_d_zeta = 2.0 * jnp.sum(d2rdzeta2 * rze, axis=0)
