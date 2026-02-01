@@ -23,7 +23,7 @@ class VmecBoundary:
     bsubvmnc: np.ndarray | None
     ns: int | None
 
-def read_wout_boundary(path: str) -> VmecBoundary:
+def read_wout_boundary(path: str, *, radial_mode: str = "full") -> VmecBoundary:
     """
     Read the outer boundary Fourier representation from a VMEC wout_*.nc.
 
@@ -33,9 +33,18 @@ def read_wout_boundary(path: str) -> VmecBoundary:
 
     This routine detects the orientation using the length of xm/xn (mnmax) and
     always returns 1D boundary arrays of length mnmax.
+
+    Args:
+      radial_mode:
+        - "full": use the outermost point in VMEC's FULL radial grid (REGCOIL geometry_option_plasma=2)
+        - "half": average the outermost two FULL grid points to approximate the outermost HALF grid point
+                  (REGCOIL geometry_option_plasma=3)
     """
     if netCDF4 is None:
         raise ImportError("netCDF4 is required to read VMEC wout files.")
+    radial_mode = str(radial_mode).strip().lower()
+    if radial_mode not in ("full", "half"):
+        raise ValueError(f"radial_mode must be 'full' or 'half', got {radial_mode!r}")
     ds = netCDF4.Dataset(path, "r")
     nfp = int(ds.variables["nfp"][()])
     lasym = bool(int(ds.variables["lasym__logical__"][()])) if "lasym__logical__" in ds.variables else bool(ds.variables["lasym"][()])
@@ -62,20 +71,35 @@ def read_wout_boundary(path: str) -> VmecBoundary:
     if rmnc_all.ndim != 2:
         ds.close()
         raise ValueError(f"Unexpected rmnc array rank {rmnc_all.ndim}, expected 2.")
+    if radial_mode == "half" and min(rmnc_all.shape) < 2:
+        ds.close()
+        raise ValueError(f"radial_mode='half' requires at least 2 radial surfaces in rmnc, got shape={rmnc_all.shape}")
     if rmnc_all.shape[0] == mnmax:
         # (mnmax, ns)
         ns = int(rmnc_all.shape[1])
-        rmnc = rmnc_all[:, -1].astype(float)
-        zmns = zmns_all[:, -1].astype(float)
-        rmns = (rmns_all[:, -1] if rmns_all is not None else np.zeros_like(rmnc_all[:, -1])).astype(float)
-        zmnc = (zmnc_all[:, -1] if zmnc_all is not None else np.zeros_like(rmnc_all[:, -1])).astype(float)
+        if radial_mode == "half":
+            rmnc = (0.5 * rmnc_all[:, -2] + 0.5 * rmnc_all[:, -1]).astype(float)
+            zmns = (0.5 * zmns_all[:, -2] + 0.5 * zmns_all[:, -1]).astype(float)
+            rmns = (0.5 * (rmns_all[:, -2] + rmns_all[:, -1]) if rmns_all is not None else np.zeros_like(rmnc_all[:, -1])).astype(float)
+            zmnc = (0.5 * (zmnc_all[:, -2] + zmnc_all[:, -1]) if zmnc_all is not None else np.zeros_like(rmnc_all[:, -1])).astype(float)
+        else:
+            rmnc = rmnc_all[:, -1].astype(float)
+            zmns = zmns_all[:, -1].astype(float)
+            rmns = (rmns_all[:, -1] if rmns_all is not None else np.zeros_like(rmnc_all[:, -1])).astype(float)
+            zmnc = (zmnc_all[:, -1] if zmnc_all is not None else np.zeros_like(rmnc_all[:, -1])).astype(float)
     elif rmnc_all.shape[1] == mnmax:
         # (ns, mnmax)
         ns = int(rmnc_all.shape[0])
-        rmnc = rmnc_all[-1, :].astype(float)
-        zmns = zmns_all[-1, :].astype(float)
-        rmns = (rmns_all[-1, :] if rmns_all is not None else np.zeros_like(rmnc_all[-1, :])).astype(float)
-        zmnc = (zmnc_all[-1, :] if zmnc_all is not None else np.zeros_like(rmnc_all[-1, :])).astype(float)
+        if radial_mode == "half":
+            rmnc = (0.5 * rmnc_all[-2, :] + 0.5 * rmnc_all[-1, :]).astype(float)
+            zmns = (0.5 * zmns_all[-2, :] + 0.5 * zmns_all[-1, :]).astype(float)
+            rmns = (0.5 * (rmns_all[-2, :] + rmns_all[-1, :]) if rmns_all is not None else np.zeros_like(rmnc_all[-1, :])).astype(float)
+            zmnc = (0.5 * (zmnc_all[-2, :] + zmnc_all[-1, :]) if zmnc_all is not None else np.zeros_like(rmnc_all[-1, :])).astype(float)
+        else:
+            rmnc = rmnc_all[-1, :].astype(float)
+            zmns = zmns_all[-1, :].astype(float)
+            rmns = (rmns_all[-1, :] if rmns_all is not None else np.zeros_like(rmnc_all[-1, :])).astype(float)
+            zmnc = (zmnc_all[-1, :] if zmnc_all is not None else np.zeros_like(rmnc_all[-1, :])).astype(float)
     else:
         ds.close()
         raise ValueError(

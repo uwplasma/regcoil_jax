@@ -41,7 +41,7 @@ def write_output_nc(
         raise ImportError("netCDF4 is required to write REGCOIL output .nc files.")
     ds = netCDF4.Dataset(path, "w")
     nlambda = len(lambdas)
-    nb = sols.shape[1]
+    nb = int(sols.shape[1])
 
     # Geometry / grid sizes (REGCOIL convention: theta, zeta grids for a single field period)
     theta_p = np.asarray(mats.get("theta_plasma", []))
@@ -54,36 +54,120 @@ def write_output_nc(
     nzeta_coil = int(zeta_c.size) if zeta_c.size else None
     nfp = int(mats.get("nfp", 1))
 
+    def _def_dim(name: str, size: int | None):
+        if size is None:
+            return
+        if name in ds.dimensions:
+            return
+        ds.createDimension(name, int(size))
+
+    def _write_scalar(name: str, value, *, dtype="f8"):
+        v = ds.createVariable(name, dtype)
+        v[...] = value
+
+    def _maybe_write_scalar(name: str, value, *, dtype="f8"):
+        if value is None:
+            return
+        _write_scalar(name, value, dtype=dtype)
+
+    def _maybe_write_1d(name: str, value, dim: str, *, dtype="f8"):
+        if value is None:
+            return
+        arr = np.asarray(value)
+        if arr.ndim != 1:
+            return
+        ds.createVariable(name, dtype, (dim,))[:] = arr
+
+    # Predefine mode-count dimensions early so we can safely create scalar variables
+    # with the same name later (matching the Fortran output structure).
+    if "xm" in mats:
+        try:
+            _def_dim("mnmax_potential", int(np.asarray(mats["xm"]).size))
+        except Exception:
+            pass
+    if mats.get("xm_plasma", None) is not None:
+        try:
+            _def_dim("mnmax_plasma", int(np.asarray(mats["xm_plasma"]).size))
+        except Exception:
+            pass
+    if mats.get("xm_coil", None) is not None:
+        try:
+            _def_dim("mnmax_coil", int(np.asarray(mats["xm_coil"]).size))
+        except Exception:
+            pass
+
     ds.createDimension("nlambda", nlambda)
-    ds.createDimension("nbasis", nb)
     ds.createDimension("xyz", 3)
+    # Fortran REGCOIL naming:
+    _def_dim("num_basis_functions", nb)
+    # Back-compat: older regcoil_jax outputs used "nbasis".
+    _def_dim("nbasis", nb)
 
     if ntheta_plasma is not None and nzeta_plasma is not None:
-        ds.createDimension("ntheta_plasma", ntheta_plasma)
-        ds.createDimension("nzeta_plasma", nzeta_plasma)
-        ds.createDimension("nzetal_plasma", nzeta_plasma * nfp)
+        _def_dim("ntheta_plasma", ntheta_plasma)
+        _def_dim("nzeta_plasma", nzeta_plasma)
+        _def_dim("nzetal_plasma", nzeta_plasma * nfp)
+        # Flattened indexing dims used by Fortran output:
+        _def_dim("ntheta_nzeta_plasma", ntheta_plasma * nzeta_plasma)
+        _def_dim("ntheta_times_nzeta_plasma", ntheta_plasma * nzeta_plasma)
     if ntheta_coil is not None and nzeta_coil is not None:
-        ds.createDimension("ntheta_coil", ntheta_coil)
-        ds.createDimension("nzeta_coil", nzeta_coil)
-        ds.createDimension("nzetal_coil", nzeta_coil * nfp)
+        _def_dim("ntheta_coil", ntheta_coil)
+        _def_dim("nzeta_coil", nzeta_coil)
+        _def_dim("nzetal_coil", nzeta_coil * nfp)
+        _def_dim("ntheta_nzeta_coil", ntheta_coil * nzeta_coil)
+        _def_dim("ntheta_times_nzeta_coil", ntheta_coil * nzeta_coil)
 
     # Scalars
-    if "nfp" in mats:
-        ds.createVariable("nfp", "i4")[...] = int(mats["nfp"])
-    ds.createVariable("nlambda", "i4")[...] = int(nlambda)
-    ds.createVariable("exit_code", "i4")[...] = int(exit_code)
+    _maybe_write_scalar("nfp", int(mats.get("nfp")) if "nfp" in mats else None, dtype="i4")
+    _write_scalar("nlambda", int(nlambda), dtype="i4")
+    _write_scalar("exit_code", int(exit_code), dtype="i4")
     if chosen_idx is not None:
-        ds.createVariable("chosen_idx", "i4")[...] = int(chosen_idx)
-    if "net_poloidal_current_Amperes" in mats:
-        ds.createVariable("net_poloidal_current_Amperes", "f8")[...] = float(mats["net_poloidal_current_Amperes"])
-    if "net_toroidal_current_Amperes" in mats:
-        ds.createVariable("net_toroidal_current_Amperes", "f8")[...] = float(mats["net_toroidal_current_Amperes"])
-    if "curpol" in inputs:
-        ds.createVariable("curpol", "f8")[...] = float(inputs["curpol"])
-    if "area_plasma" in mats:
-        ds.createVariable("area_plasma", "f8")[...] = float(np.asarray(mats["area_plasma"]))
-    if "area_coil" in mats:
-        ds.createVariable("area_coil", "f8")[...] = float(np.asarray(mats["area_coil"]))
+        _write_scalar("chosen_idx", int(chosen_idx), dtype="i4")
+
+    # Input geometry options (Fortran variables):
+    if "geometry_option_plasma" in inputs:
+        _write_scalar("geometry_option_plasma", int(inputs["geometry_option_plasma"]), dtype="i4")
+    if "geometry_option_coil" in inputs:
+        _write_scalar("geometry_option_coil", int(inputs["geometry_option_coil"]), dtype="i4")
+
+    # Grid sizes
+    if ntheta_plasma is not None:
+        _write_scalar("ntheta_plasma", int(ntheta_plasma), dtype="i4")
+    if nzeta_plasma is not None:
+        _write_scalar("nzeta_plasma", int(nzeta_plasma), dtype="i4")
+        _write_scalar("nzetal_plasma", int(nzeta_plasma * nfp), dtype="i4")
+    if ntheta_coil is not None:
+        _write_scalar("ntheta_coil", int(ntheta_coil), dtype="i4")
+    if nzeta_coil is not None:
+        _write_scalar("nzeta_coil", int(nzeta_coil), dtype="i4")
+        _write_scalar("nzetal_coil", int(nzeta_coil * nfp), dtype="i4")
+
+    # Torus parameters (when present)
+    _maybe_write_scalar("R0_plasma", float(inputs["r0_plasma"]) if "r0_plasma" in inputs else None)
+    _maybe_write_scalar("a_plasma", float(inputs["a_plasma"]) if "a_plasma" in inputs else None)
+    _maybe_write_scalar("R0_coil", float(inputs["r0_coil"]) if "r0_coil" in inputs else None)
+    _maybe_write_scalar("a_coil", float(inputs["a_coil"]) if "a_coil" in inputs else None)
+
+    # Basis / mode sizes
+    _maybe_write_scalar("mpol_potential", int(mats.get("mpol_potential")) if "mpol_potential" in mats else None, dtype="i4")
+    _maybe_write_scalar("ntor_potential", int(mats.get("ntor_potential")) if "ntor_potential" in mats else None, dtype="i4")
+    _maybe_write_scalar("mnmax_potential", int(mats.get("mnmax_potential")) if "mnmax_potential" in mats else None, dtype="i4")
+    _maybe_write_scalar("num_basis_functions", int(mats.get("num_basis_functions")) if "num_basis_functions" in mats else None, dtype="i4")
+    _maybe_write_scalar("symmetry_option", int(mats.get("symmetry_option")) if "symmetry_option" in mats else None, dtype="i4")
+    _maybe_write_scalar("save_level", int(mats.get("save_level")) if "save_level" in mats else None, dtype="i4")
+
+    # Physics scalars
+    _maybe_write_scalar(
+        "net_poloidal_current_Amperes",
+        float(mats.get("net_poloidal_current_Amperes")) if "net_poloidal_current_Amperes" in mats else None,
+    )
+    _maybe_write_scalar(
+        "net_toroidal_current_Amperes",
+        float(mats.get("net_toroidal_current_Amperes")) if "net_toroidal_current_Amperes" in mats else None,
+    )
+    _maybe_write_scalar("curpol", float(inputs["curpol"]) if "curpol" in inputs else None)
+    _maybe_write_scalar("area_plasma", float(np.asarray(mats["area_plasma"])) if "area_plasma" in mats else None)
+    _maybe_write_scalar("area_coil", float(np.asarray(mats["area_coil"])) if "area_coil" in mats else None)
 
     # Grids
     if ntheta_plasma is not None:
@@ -109,7 +193,7 @@ def write_output_nc(
     ds.createVariable("max_Bnormal","f8",("nlambda",))[:] = np.asarray(max_B)
     ds.createVariable("max_K","f8",("nlambda",))[:] = np.asarray(max_K)
 
-    vsol = ds.createVariable("single_valued_current_potential_mn", "f8", ("nlambda","nbasis"))
+    vsol = ds.createVariable("single_valued_current_potential_mn", "f8", ("nlambda","num_basis_functions"))
     vsol[:] = np.asarray(sols)
 
     # Optional fields for improved parity & testability.
@@ -122,6 +206,18 @@ def write_output_nc(
 
         Bnet = np.asarray(mats.get("Bnet", np.zeros((ntheta_plasma, nzeta_plasma))))
         ds.createVariable("Bnormal_from_net_coil_currents", "f8", ("nzeta_plasma", "ntheta_plasma"))[:] = Bnet.T
+
+        # Fortran also saves h (flattened) which satisfies:
+        #   Bnormal_from_net_coil_currents = reshape(h,(ntheta,nzeta)) / norm_normal_plasma
+        try:
+            h_tz = Bnet * normN_p
+            h_flat = h_tz.T.reshape(-1)  # (ntheta_nzeta_plasma,) with theta fastest
+            ds.createVariable("h", "f8", ("ntheta_nzeta_plasma",))[:] = h_flat
+        except Exception:
+            pass
+
+        _maybe_write_1d("RHS_B", mats.get("RHS_B", None), "num_basis_functions")
+        _maybe_write_1d("RHS_regularization", mats.get("RHS_regularization", mats.get("RHS_reg", None)), "num_basis_functions")
 
         # Plasma surface geometry on all nfp field periods.
         try:
@@ -248,9 +344,33 @@ def write_output_nc(
     if "xm" in mats and "xn" in mats:
         xm = np.asarray(mats["xm"])
         xn = np.asarray(mats["xn"])
-        ds.createDimension("mnmax", xm.size)
-        ds.createVariable("xm_potential","i4",("mnmax",))[:] = xm
-        ds.createVariable("xn_potential","i4",("mnmax",))[:] = xn
+        _def_dim("mnmax_potential", int(xm.size))
+        ds.createVariable("xm_potential","i4",("mnmax_potential",))[:] = xm
+        ds.createVariable("xn_potential","i4",("mnmax_potential",))[:] = xn
+
+    # Surface mode lists and coefficients (when available)
+    for prefix, dim_name in [("plasma", "mnmax_plasma"), ("coil", "mnmax_coil")]:
+        xm_key = f"xm_{prefix}"
+        xn_key = f"xn_{prefix}"
+        rmnc_key = f"rmnc_{prefix}"
+        zmns_key = f"zmns_{prefix}"
+        rmns_key = f"rmns_{prefix}"
+        zmnc_key = f"zmnc_{prefix}"
+        xm_val = mats.get(xm_key, None)
+        xn_val = mats.get(xn_key, None)
+        if xm_val is None or xn_val is None:
+            continue
+        xm_arr = np.asarray(xm_val)
+        xn_arr = np.asarray(xn_val)
+        _def_dim(dim_name, int(xm_arr.size))
+        ds.createVariable(f"xm_{prefix}", "i4", (dim_name,))[:] = xm_arr.astype(np.int32)
+        ds.createVariable(f"xn_{prefix}", "i4", (dim_name,))[:] = xn_arr.astype(np.int32)
+        _maybe_write_1d(f"rmnc_{prefix}", mats.get(rmnc_key, None), dim_name)
+        _maybe_write_1d(f"zmns_{prefix}", mats.get(zmns_key, None), dim_name)
+        _maybe_write_1d(f"rmns_{prefix}", mats.get(rmns_key, None), dim_name)
+        _maybe_write_1d(f"zmnc_{prefix}", mats.get(zmnc_key, None), dim_name)
+        # Fortran exposes mnmax_* scalars too.
+        _maybe_write_scalar(f"mnmax_{prefix}", int(xm_arr.size), dtype="i4")
 
     ds.setncattr("regcoil_jax_version", "0.2")
     ds.close()

@@ -89,17 +89,22 @@ def main():
         inputs["bnorm_filename"] = _resolve_relpath(str(inputs["bnorm_filename"]))
     if "nescin_filename" in inputs:
         inputs["nescin_filename"] = _resolve_relpath(str(inputs["nescin_filename"]))
+    if "shape_filename_plasma" in inputs:
+        inputs["shape_filename_plasma"] = _resolve_relpath(str(inputs["shape_filename_plasma"]))
+    if "efit_filename" in inputs:
+        inputs["efit_filename"] = _resolve_relpath(str(inputs["efit_filename"]))
 
-    # VMEC boundary (optional, used by plasma/coil options 2)
+    # VMEC boundary (optional, used by plasma/coil options 2/3/4 and coil options 2/4)
     vmec_surface = None
     gpl = int(inputs.get("geometry_option_plasma", 1))
     gcl = int(inputs.get("geometry_option_coil", 1))
-    if gpl == 2 or gcl == 2 or (gpl == 0 and "wout_filename" in inputs):
+    if gpl in (2, 3, 4) or gcl in (2, 4) or (gpl == 0 and "wout_filename" in inputs):
         wout = inputs.get("wout_filename", None)
         if wout is None:
             raise SystemExit("VMEC-based geometry requires wout_filename")
         wout = _resolve_relpath(wout)
-        bound = read_wout_boundary(wout)
+        radial_mode = "half" if gpl in (3, 4) else "full"
+        bound = read_wout_boundary(wout, radial_mode=radial_mode)
         curpol, G, nfp, lasym = compute_curpol_and_G(bound)
         print(f"[vmec] nfp={nfp} lasym={lasym} curpol={curpol} G={G}")
         # Match regcoil_init_plasma_mod.f90 behavior: if a VMEC wout file is used

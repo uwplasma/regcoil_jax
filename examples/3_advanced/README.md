@@ -13,6 +13,7 @@ Some cases also load a BNORM file (`load_bnorm=.true.`) to include a nonzero
 
 Larger showcase case (not CI-tested):
 - `regcoil_in.regcoilPaper_figure10d_originalAngle_loRes`: W7-X-like configuration with a NESCOIL winding surface + BNORM.
+- `regcoil_in.regcoilPaper_figure10d_geometry_option_coil_4_loRes`: same equilibrium, but with `geometry_option_coil=4` (constant-arclength theta).
 
 Postprocessing:
 - `postprocess_make_figures_and_vtk.py`: generates publication-ready figures and ParaView `.vtp` files

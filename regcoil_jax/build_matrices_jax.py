@@ -19,7 +19,8 @@ def build_matrices(inputs, plasma, coil):
 
     Currently supports:
       - regularization_term_option in {chi2_K, K_xy, Laplace-Beltrami}
-      - geometry_option_plasma in {1,2}; geometry_option_coil in {1,2}
+      - geometry_option_plasma in {0,1,2,3,6,7} (see surfaces.py)
+      - geometry_option_coil in {0,1,2,3,4} (see surfaces.py)
       - load_bnorm (bnorm file) for Bnormal_from_plasma_current
     """
     nfp = int(plasma["nfp"])
@@ -34,6 +35,7 @@ def build_matrices(inputs, plasma, coil):
     symmetry_option = int(inputs.get("symmetry_option", 1))
     mpol_pot = int(inputs.get("mpol_potential", inputs.get("mpol_coil", 10)))
     ntor_pot = int(inputs.get("ntor_potential", inputs.get("ntor_coil", 10)))
+    save_level = int(inputs.get("save_level", 3))
     # Match regcoil_variables.f90 defaults:
     #   net_poloidal_current_Amperes = 1
     #   net_toroidal_current_Amperes = 0
@@ -132,24 +134,38 @@ def build_matrices(inputs, plasma, coil):
     #     then undo BNORM scaling by multiplying by curpol.
     load_bnorm = bool(inputs.get("load_bnorm", False))
     if load_bnorm:
-        bnorm_filename = inputs.get("bnorm_filename", None)
-        if bnorm_filename is None:
-            raise ValueError("load_bnorm=.true. requires bnorm_filename")
-        if "curpol" not in inputs:
-            raise ValueError("load_bnorm requires curpol (set by VMEC wout or specify curpol in the input)")
-        curpol = float(inputs["curpol"])
+        # FOCUS-format boundary files (geometry_option_plasma=7) can embed Bn coefficients.
+        # In Fortran this is handled in regcoil_read_bnorm.f90 by checking nbf>0.
+        focus = plasma.get("focus_bnorm", None)
+        if focus is not None:
+            bfm = jnp.asarray(focus["bfm"], dtype=jnp.int32)
+            bfn = jnp.asarray(focus["bfn"], dtype=jnp.int32)
+            bfc = jnp.asarray(focus["bfc"], dtype=jnp.float64)
+            bfs = jnp.asarray(focus["bfs"], dtype=jnp.float64)
 
-        m_np, n_np, bf_np = read_bnorm_modes(str(bnorm_filename))
-        if m_np.size == 0:
-            raise ValueError(f"No modes found in bnorm file: {bnorm_filename}")
-        m = jnp.asarray(m_np, dtype=jnp.int32)
-        n = jnp.asarray(n_np, dtype=jnp.int32)
-        bf = jnp.asarray(bf_np, dtype=jnp.float64)
+            th = plasma["theta"]
+            ze = plasma["zeta"]
+            ang = bfm[:, None, None] * th[None, :, None] - bfn[:, None, None] * ze[None, None, :]
+            Bplasma = jnp.sum(bfc[:, None, None] * jnp.cos(ang) + bfs[:, None, None] * jnp.sin(ang), axis=0)
+        else:
+            bnorm_filename = inputs.get("bnorm_filename", None)
+            if bnorm_filename is None:
+                raise ValueError("load_bnorm=.true. requires bnorm_filename")
+            if "curpol" not in inputs:
+                raise ValueError("load_bnorm requires curpol (set by VMEC wout or specify curpol in the input)")
+            curpol = float(inputs["curpol"])
 
-        th = plasma["theta"]
-        ze = plasma["zeta"]
-        ang = m[:, None, None] * th[None, :, None] + (n[:, None, None] * nfp) * ze[None, None, :]
-        Bplasma = jnp.sum(bf[:, None, None] * jnp.sin(ang), axis=0) * curpol
+            m_np, n_np, bf_np = read_bnorm_modes(str(bnorm_filename))
+            if m_np.size == 0:
+                raise ValueError(f"No modes found in bnorm file: {bnorm_filename}")
+            m = jnp.asarray(m_np, dtype=jnp.int32)
+            n = jnp.asarray(n_np, dtype=jnp.int32)
+            bf = jnp.asarray(bf_np, dtype=jnp.float64)
+
+            th = plasma["theta"]
+            ze = plasma["zeta"]
+            ang = m[:, None, None] * th[None, :, None] + (n[:, None, None] * nfp) * ze[None, None, :]
+            Bplasma = jnp.sum(bf[:, None, None] * jnp.sin(ang), axis=0) * curpol
     else:
         Bplasma = jnp.zeros_like(Bnet)
     Btarget = Bplasma + Bnet
@@ -195,8 +211,15 @@ def build_matrices(inputs, plasma, coil):
     area_plasma = nfp * dth_p * dze_p * jnp.sum(plasma["normN"])
     area_coil = nfp * dth_c * dze_c * jnp.sum(coil["normN"])
 
-    return dict(
+    out = dict(
         nfp=nfp,
+        # Metadata scalars (match regcoil_write_output.f90 naming where possible)
+        mpol_potential=int(mpol_pot),
+        ntor_potential=int(ntor_pot),
+        mnmax_potential=int(xm.shape[0]),
+        num_basis_functions=int(nb),
+        symmetry_option=int(symmetry_option),
+        save_level=int(save_level),
         net_poloidal_current_Amperes=net_pol,
         net_toroidal_current_Amperes=net_tor,
         # Grids / geometry (for output + diagnostics)
@@ -227,5 +250,28 @@ def build_matrices(inputs, plasma, coil):
         Bnet=Bnet, Bplasma=Bplasma,
         matrix_B=matrix_B, RHS_B=RHS_B,
         matrix_reg=matrix_reg, RHS_reg=RHS_reg,
+        RHS_regularization=RHS_reg,
+        h=h,
         dth_p=dth_p, dze_p=dze_p, dth_c=dth_c, dze_c=dze_c,
+        # Surface Fourier coefficients (for output parity)
+        xm_plasma=plasma.get("xm_plasma", None),
+        xn_plasma=plasma.get("xn_plasma", None),
+        rmnc_plasma=plasma.get("rmnc_plasma", None),
+        zmns_plasma=plasma.get("zmns_plasma", None),
+        rmns_plasma=plasma.get("rmns_plasma", None),
+        zmnc_plasma=plasma.get("zmnc_plasma", None),
+        xm_coil=coil.get("xm_coil", None),
+        xn_coil=coil.get("xn_coil", None),
+        rmnc_coil=coil.get("rmnc_coil", None),
+        zmns_coil=coil.get("zmns_coil", None),
+        rmns_coil=coil.get("rmns_coil", None),
+        zmnc_coil=coil.get("zmnc_coil", None),
     )
+    # Optional heavy outputs, matching REGCOIL save_level behavior:
+    #   save_level < 1: save inductance
+    #   save_level < 2: save g
+    if save_level < 1:
+        out["inductance"] = ind_eff
+    if save_level < 2:
+        out["g"] = g
+    return out
