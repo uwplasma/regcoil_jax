@@ -74,6 +74,71 @@ def diagnostics(mats, sols):
     max_K = jnp.sqrt(jnp.max(K2, axis=1))
     return chi2_B, chi2_K, max_B, max_K
 
+
+def target_quantity(mats, *, sol, chi2_B, chi2_K, max_B, max_K, target_option: str, target_option_p: float) -> float:
+    """Match REGCOIL's target_function() logic in regcoil_auto_regularization_solve.f90.
+
+    This helper is intentionally *not* jitted: it is used only in general_option=5 (lambda search)
+    control-flow which is currently Python-level for parity/debuggability.
+    """
+    opt = target_option.strip().lower()
+    area_plasma = float(mats.get("area_plasma"))
+    area_coil = float(mats.get("area_coil"))
+
+    if opt in ("max_k",):
+        return float(max_K)
+    if opt in ("rms_k",):
+        return math.sqrt(float(chi2_K) / area_coil)
+    if opt in ("chi2_k",):
+        return float(chi2_K)
+    if opt in ("max_bnormal",):
+        return float(max_B)
+    if opt in ("rms_bnormal",):
+        return math.sqrt(float(chi2_B) / area_plasma)
+    if opt in ("chi2_b",):
+        return float(chi2_B)
+
+    # Options that depend on the full K(θ,ζ) distribution:
+    if opt in ("max_k_lse", "lp_norm_k"):
+        # Reconstruct K^2 on the coil surface in the same way as diagnostics().
+        nfp = int(mats["nfp"])
+        dth_c = float(mats["dth_c"])
+        dze_c = float(mats["dze_c"])
+        normNc = mats["normNc"]
+
+        fx = mats["fx"]
+        fy = mats["fy"]
+        fz = mats["fz"]
+        dx = mats["dx"]
+        dy = mats["dy"]
+        dz = mats["dz"]
+
+        sol_row = sol[None, :]
+        Kdx = dx[None, :] - sol_row @ fx.T
+        Kdy = dy[None, :] - sol_row @ fy.T
+        Kdz = dz[None, :] - sol_row @ fz.T
+        K2_times_N = (Kdx * Kdx + Kdy * Kdy + Kdz * Kdz) / normNc[None, :]
+        K2 = K2_times_N / normNc[None, :]  # |K|^2
+        Kmag = jnp.sqrt(K2[0])
+        maxK = float(max_K)
+
+        p = float(target_option_p)
+        # weights integrate over the winding surface and normalize by area, matching regcoil_diagnostics.f90
+        w = (nfp * dth_c * dze_c) * (normNc / area_coil)
+
+        if opt == "max_k_lse":
+            # max_K_lse = (1/p)*log(sum(w*exp(p*(K-maxK)))) + maxK
+            # Use a stable form.
+            s = jnp.sum(w * jnp.exp(p * (Kmag - maxK)))
+            return float((1.0 / p) * jnp.log(s) + maxK)
+
+        # lp_norm_K = (∫ |K|^p dA / A)^(1/p)
+        s = jnp.sum(w * (Kmag**p))
+        return float(s ** (1.0 / p))
+
+    # Default to max_K (matches regcoil_variables.f90 default target_option)
+    return float(max_K)
+
 def choose_lambda(inputs, lambdas, chi2_B, chi2_K, max_B, max_K):
     general = int(inputs.get("general_option", 1))
     if general != 5:
@@ -108,6 +173,7 @@ def auto_regularization_solve(inputs, mats):
     target_option = str(inputs.get("target_option", "max_K")).strip().lower()
     target_value = float(inputs.get("target_value", 0.0))
     lambda_search_tolerance = float(inputs.get("lambda_search_tolerance", 1.0e-5))
+    target_option_p = float(inputs.get("target_option_p", 4.0))
 
     def target_increases_with_lambda() -> bool:
         if target_option in ("max_bnormal", "rms_bnormal", "chi2_b"):
@@ -147,21 +213,17 @@ def auto_regularization_solve(inputs, mats):
     chi2_B_sol0 = float(nfp * dth_p * dze_p * jnp.sum((Btarget * Btarget) * normNp))
     chi2_K_sol0 = float(nfp * dth_c * dze_c * jnp.sum((dx * dx + dy * dy + dz * dz) / normNc))
 
-    def eval_target(chi2_B, chi2_K, max_B, max_K) -> float:
-        if target_option == "max_k":
-            return float(max_K)
-        if target_option == "rms_k":
-            return math.sqrt(float(chi2_K) / area_coil)
-        if target_option == "chi2_k":
-            return float(chi2_K)
-        if target_option == "max_bnormal":
-            return float(max_B)
-        if target_option == "rms_bnormal":
-            return math.sqrt(float(chi2_B) / area_plasma)
-        if target_option == "chi2_b":
-            return float(chi2_B)
-        # Default to max_K (matches regcoil default target_option in regcoil_variables.f90)
-        return float(max_K)
+    def eval_target(*, sol, chi2_B, chi2_K, max_B, max_K) -> float:
+        return target_quantity(
+            mats,
+            sol=sol,
+            chi2_B=chi2_B,
+            chi2_K=chi2_K,
+            max_B=max_B,
+            max_K=max_K,
+            target_option=target_option,
+            target_option_p=target_option_p,
+        )
 
     def _sign(x, y):
         return abs(x) if y >= 0 else -abs(x)
@@ -238,7 +300,7 @@ def auto_regularization_solve(inputs, mats):
         x = solve_one_lambda(mats, lam)
         chi2_B, chi2_K, max_B, max_K = diagnostics(mats, x[None, :])
         cB = float(chi2_B[0]); cK = float(chi2_K[0]); mB = float(max_B[0]); mK = float(max_K[0])
-        tval = eval_target(cB, cK, mB, mK)
+        tval = eval_target(sol=x, chi2_B=cB, chi2_K=cK, max_B=mB, max_K=mK)
 
         lambdas.append(float(lam))
         sols.append(x)

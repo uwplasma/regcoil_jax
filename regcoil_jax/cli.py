@@ -87,6 +87,8 @@ def main():
         inputs["wout_filename"] = _resolve_relpath(str(inputs["wout_filename"]))
     if "bnorm_filename" in inputs:
         inputs["bnorm_filename"] = _resolve_relpath(str(inputs["bnorm_filename"]))
+    if "nescin_filename" in inputs:
+        inputs["nescin_filename"] = _resolve_relpath(str(inputs["nescin_filename"]))
 
     # VMEC boundary (optional, used by plasma/coil options 2)
     vmec_surface = None
@@ -228,6 +230,10 @@ def main():
             f.write(f"input={input_path_abs}\n")
             f.write(f"nbasis={int(mats['matrix_B'].shape[0])}\n")
             f.write(f"lambdas=[{float(lambdas[0]):.6e}, {float(lambdas[-1]):.6e}] n={len(lambdas)}\n")
+            if general_option == 5:
+                f.write(f"target_option={str(inputs.get('target_option', 'max_K')).strip()}\n")
+                f.write(f"target_value={float(inputs.get('target_value', 0.0)):.16e}\n")
+                f.write(f"target_option_p={float(inputs.get('target_option_p', 4.0)):.16e}\n")
             f.write(f"exit_code={int(exit_code)}\n")
             if idx is not None:
                 f.write(f"chosen_idx={idx} chosen_lambda={float(lambdas[idx]):.6e}\n")
