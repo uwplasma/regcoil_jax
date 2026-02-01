@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -38,18 +39,24 @@ def _run_regcoil_jax(input_path: Path) -> subprocess.CompletedProcess[str]:
 
 def _copy_example(tmp_dir: Path, input_name: str) -> Path:
     src = EXAMPLES_DIR / input_name
-    dst = tmp_dir / input_name
+    dst = tmp_dir / src.name
     shutil.copy2(src, dst)
 
     # VMEC-based case needs the wout file next to the input.
-    if "wout_d23p4_tm.nc" in src.read_text(encoding="utf-8", errors="ignore"):
-        shutil.copy2(EXAMPLES_DIR / "wout_d23p4_tm.nc", tmp_dir / "wout_d23p4_tm.nc")
+    txt = src.read_text(encoding="utf-8", errors="ignore")
+    m = re.search(r"wout_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
+    if m:
+        wout = m.group(1)
+        wout_src = Path(wout) if os.path.isabs(wout) else (src.parent / wout)
+        if wout_src.exists():
+            shutil.copy2(wout_src, tmp_dir / Path(wout).name)
 
     return dst
 
 
-def _expected_output_paths(tmp_dir: Path, input_name: str) -> tuple[Path, Path]:
-    suffix = input_name[len("regcoil_in") :]  # includes leading "."
+def _expected_output_paths(tmp_dir: Path, input_basename: str) -> tuple[Path, Path]:
+    assert input_basename.startswith("regcoil_in."), f"unexpected input file basename: {input_basename}"
+    suffix = input_basename[len("regcoil_in") :]  # includes leading "."
     out_nc = tmp_dir / f"regcoil_out{suffix}.nc"
     out_log = tmp_dir / f"regcoil_out{suffix}.log"
     return out_nc, out_log
@@ -135,15 +142,27 @@ def _assert_output_self_consistent(path: Path):
 def test_examples_match_baselines(tmp_path: Path):
     baselines = _load_baselines()
     cases = [
-        ("axisymmetrySanityTest_chi2K_regularization", "regcoil_in.axisymmetrySanityTest_chi2K_regularization"),
-        ("compareToMatlab1", "regcoil_in.compareToMatlab1"),
-        ("compareToMatlab1_option1", "regcoil_in.compareToMatlab1_option1"),
-        ("lambda_search_1", "regcoil_in.lambda_search_1"),
+        ("axisymmetrySanityTest_chi2K_regularization", "1_simple/regcoil_in.axisymmetrySanityTest_chi2K_regularization"),
+        ("compareToMatlab1", "1_simple/regcoil_in.compareToMatlab1"),
+        ("compareToMatlab1_option1", "1_simple/regcoil_in.compareToMatlab1_option1"),
+        ("lambda_search_1", "3_advanced/regcoil_in.lambda_search_1"),
+        ("lambda_search_2_current_density_target_too_low", "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low"),
+        ("lambda_search_3_current_density_target_too_high", "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high"),
+        ("lambda_search_4_chi2_B", "3_advanced/regcoil_in.lambda_search_4_chi2_B"),
     ]
+
+    expected_exit_codes = {
+        # regcoil_auto_regularization_solve.f90 conventions:
+        #  -2: target too low (unachievable), -3: target too high (unachievable)
+        "lambda_search_1": 0,
+        "lambda_search_2_current_density_target_too_low": -2,
+        "lambda_search_3_current_density_target_too_high": -3,
+        "lambda_search_4_chi2_B": 0,
+    }
 
     for case_name, input_name in cases:
         input_path = _copy_example(tmp_path, input_name)
-        out_nc, out_log = _expected_output_paths(tmp_path, input_name)
+        out_nc, out_log = _expected_output_paths(tmp_path, input_path.name)
 
         res = _run_regcoil_jax(input_path)
         assert res.returncode == 0, f"{case_name} failed.\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
@@ -159,9 +178,12 @@ def test_examples_match_baselines(tmp_path: Path):
 
         _assert_output_self_consistent(out_nc)
 
-        # For general_option=5 (lambda search), the last lambda is the chosen one and should be
-        # written to the summary log.
-        if case_name == "lambda_search_1":
+        # For general_option=5 (lambda search), validate exit_code and (when applicable) the chosen lambda.
+        if case_name in expected_exit_codes:
             log_txt = out_log.read_text(encoding="utf-8", errors="ignore")
-            assert "chosen_idx=" in log_txt
-            assert f"chosen_idx={len(expected['lambda']) - 1}" in log_txt
+            assert f"exit_code={expected_exit_codes[case_name]}" in log_txt
+            if expected_exit_codes[case_name] == 0:
+                assert "chosen_idx=" in log_txt
+                assert f"chosen_idx={len(expected['lambda']) - 1}" in log_txt
+            else:
+                assert "chosen_idx=" not in log_txt

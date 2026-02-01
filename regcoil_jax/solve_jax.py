@@ -2,6 +2,8 @@ from __future__ import annotations
 import math
 import jax.numpy as jnp
 
+_FORTRAN_REAL4_0P01_AS_REAL8 = 0.009999999776482582
+
 def lambda_grid(inputs):
     """REGCOIL lambda list for scan-style runs (general_option=1).
 
@@ -181,7 +183,10 @@ def auto_regularization_solve(inputs, mats):
         elif stage == 2:
             if initial_above_target is None:
                 raise RuntimeError("internal error: stage 2 entered without initial_above_target")
-            factor = 100.0 if initial_above_target else 0.01
+            # Match regcoil_auto_regularization_solve.f90 exactly:
+            #   factor = 100        (integer literal -> dp exactly)
+            #   factor = 0.01       (default-real literal -> converted to dp, i.e. float32(0.01) in practice)
+            factor = 100.0 if initial_above_target else _FORTRAN_REAL4_0P01_AS_REAL8
             if targeted_quantity_increases:
                 factor = 1.0 / factor
             lam = float(lambdas[-1]) * factor

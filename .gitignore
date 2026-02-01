@@ -10,5 +10,5 @@ dist/
 build/
 
 # REGCOIL outputs
-examples/regcoil_out*.nc
-examples/regcoil_out*.log
+examples/**/regcoil_out*.nc
+examples/**/regcoil_out*.log

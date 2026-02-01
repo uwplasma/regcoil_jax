@@ -4,7 +4,7 @@ import os
 import json
 import numpy as np
 
-from .utils import parse_namelist
+from .utils import parse_namelist, resolve_existing_path
 from .io_vmec import read_wout_boundary, compute_curpol_and_G
 
 def main():
@@ -61,7 +61,7 @@ def main():
             zmnc=jnp.asarray(bound.zmnc, dtype=jnp.float64),
         )
 
-    input_path = args.input
+    input_path = resolve_existing_path(args.input)
     input_path_abs = os.path.abspath(input_path)
     input_dir = os.path.dirname(input_path_abs) or '.'
 

@@ -3,7 +3,7 @@ Usage
 
 Run the CLI on CPU::
 
-  regcoil_jax --platform cpu --verbose examples/regcoil_in.lambda_search_1
+  regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.lambda_search_1
 
 Outputs
 -------
@@ -19,4 +19,3 @@ Tests
 From the project root::
 
   pytest -q
-

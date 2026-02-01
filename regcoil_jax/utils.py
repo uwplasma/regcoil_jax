@@ -73,18 +73,42 @@ def parse_value(raw: str) -> Any:
     except Exception as e:
         raise ValueError(f"Could not parse value: {raw}") from e
 
+def resolve_existing_path(path: str) -> str:
+    """Resolve an input path that may be given as a basename.
+
+    This helper exists to make it convenient to run example inputs without typing
+    the full `examples/<tier>/...` path, while still ensuring outputs are written
+    next to the *actual* input file.
+    """
+    if os.path.exists(path):
+        return path
+
+    base = os.path.basename(path)
+    # Search common locations inside the repo.
+    candidates = [
+        os.path.join("examples", base),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples", base),
+    ]
+    for cand in candidates:
+        if os.path.exists(cand):
+            return cand
+
+    # Also search recursively under examples/ (tiered examples layout).
+    search_roots = [
+        os.path.join("examples"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples"),
+    ]
+    for root in search_roots:
+        if not os.path.isdir(root):
+            continue
+        for dirpath, _dirnames, filenames in os.walk(root):
+            if base in filenames:
+                return os.path.join(dirpath, base)
+
+    return path
+
 def parse_namelist(path: str, namelist_name: str = "regcoil_nml") -> Dict[str, Any]:
-    # Allow passing just a basename when running from repo root; search common locations.
-    if not os.path.exists(path):
-        base = os.path.basename(path)
-        candidates = [
-            os.path.join('examples', base),
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'examples', base),
-        ]
-        for cand in candidates:
-            if os.path.exists(cand):
-                path = cand
-                break
+    path = resolve_existing_path(path)
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         text = f.read()
     # Extract &name ... /
