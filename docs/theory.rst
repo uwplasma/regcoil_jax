@@ -108,3 +108,25 @@ REGCOIL solves a symmetric linear system for each :math:`\lambda`. For numerical
 
 This scaling leaves the solution unchanged but keeps :math:`\mathbf{A}` and :math:`\mathbf{b}` :math:`\mathcal{O}(1)` for very large :math:`\lambda`.
 
+Laplace–Beltrami regularization
+-------------------------------
+
+REGCOIL also supports a Laplace–Beltrami regularization of the current potential on the winding surface.
+In the Fortran code this is enabled by setting ``regularization_term_option = "Laplace-Beltrami"``.
+
+The implementation constructs a basis matrix :math:`f_{\mathrm{LB}}` such that
+
+.. math::
+
+   \Delta_{\mathrm{LB}}\Phi(\theta,\zeta) \approx \mathbf{f}_{\mathrm{LB}}(\theta,\zeta)\cdot \boldsymbol{\Phi},
+
+and defines a corresponding secular (net-current) contribution vector :math:`d_{\mathrm{LB}}(\theta,\zeta)`.
+Diagnostics are then computed analogously to :math:`\chi_K^2`:
+
+.. math::
+
+   \chi^2_{\mathrm{LB}} = n_\mathrm{fp}\,\Delta\theta_c\,\Delta\zeta_c
+   \sum_{S_c} \frac{\left(d_{\mathrm{LB}} - f_{\mathrm{LB}}\boldsymbol{\Phi}\right)^2}{\|\mathbf{N}_c\|}.
+
+In this port, :math:`f_{\mathrm{LB}}` and :math:`d_{\mathrm{LB}}` follow the same formulas as
+``regcoil_build_matrices.f90`` and are included in the output file as ``chi2_Laplace_Beltrami`` and ``Laplace_Beltrami2``.

@@ -151,6 +151,7 @@ def test_examples_match_baselines(tmp_path: Path):
     baselines = _load_baselines()
     cases = [
         ("axisymmetrySanityTest_chi2K_regularization", "1_simple/regcoil_in.axisymmetrySanityTest_chi2K_regularization"),
+        ("axisymmetrySanityTest_Laplace_Beltrami_regularization", "1_simple/regcoil_in.axisymmetrySanityTest_Laplace_Beltrami_regularization"),
         ("compareToMatlab1", "1_simple/regcoil_in.compareToMatlab1"),
         ("compareToMatlab1_option1", "1_simple/regcoil_in.compareToMatlab1_option1"),
         ("lambda_search_1", "3_advanced/regcoil_in.lambda_search_1"),
@@ -187,6 +188,15 @@ def test_examples_match_baselines(tmp_path: Path):
             _assert_close(actual[k], expected[k])
 
         _assert_output_self_consistent(out_nc)
+
+        # For Laplace–Beltrami inputs, ensure the extra diagnostics are present and finite.
+        if "laplace_beltrami" in case_name.lower():
+            ds = netCDF4.Dataset(str(out_nc), "r")
+            assert "chi2_Laplace_Beltrami" in ds.variables
+            assert "Laplace_Beltrami2" in ds.variables
+            chi = np.array(ds.variables["chi2_Laplace_Beltrami"][:], dtype=float)
+            assert np.all(np.isfinite(chi))
+            ds.close()
 
         # For general_option=5 (lambda search), validate exit_code and (when applicable) the chosen lambda.
         if case_name in expected_exit_codes:
