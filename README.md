@@ -22,6 +22,12 @@ JAX-specific demo (autodiff + JIT on a physics kernel):
 python examples/2_intermediate/jax_optimize_coil_minor_radius.py
 ```
 
+JAX-specific demo (autodiff through matrix build + linear solve):
+
+```bash
+python examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py
+```
+
 ## Status
 - ✅ CLI runs the 3 example inputs above and writes `regcoil_out.*.nc` + `regcoil_out.*.log` next to the input file.
 - ✅ Key scalar arrays (`lambda`, `chi2_B`, `chi2_K`, `max_Bnormal`, `max_K`) match the reference Fortran REGCOIL outputs for these cases.
