@@ -21,6 +21,9 @@ diagnostic arrays match the reference Fortran REGCOIL output files:
 The tests also verify output-file self-consistency by recomputing these quantities from the written 2D fields
 (`Bnormal_total`, `K2`, grid spacings, and surface Jacobians) and checking agreement.
 
+This parity set now includes a VMEC + BNORM example (`load_bnorm=.true.`), so nonzero `Bnormal_from_plasma_current`
+is covered by regression tests.
+
 ## Example folder structure
 
 Examples are organized by “difficulty” / required physics machinery:
@@ -104,8 +107,8 @@ tree contains the same tracked source/config/docs/tests content (excluding build
 
 ## Next steps (roadmap)
 
-- **Input parity:** implement `load_bnorm` (`regcoil_read_bnorm.f90`), additional geometry options (e.g. NESCOIL / `nescin`),
-  and remaining regularization options (`Laplace–Beltrami`, `K_xy`, `K_zeta`).
+- **Input parity:** additional geometry options (e.g. NESCOIL / `nescin`) and remaining regularization options
+  (`Laplace–Beltrami`, `K_xy`, `K_zeta`).
 - **Output parity:** write a larger subset of `regcoil_write_output.f90` variables/dimensions (beyond the current “scalar parity set”
   + a few field arrays for self-consistency tests).
 - **JAX-native performance:** reduce Python loops in solve paths (`lax.scan`/`lax.map` where appropriate), avoid rebuilding matrices across lambdas,

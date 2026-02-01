@@ -4,6 +4,7 @@ import jax.numpy as jnp
 from .constants import twopi, mu0, pi
 from .build_basis import build_basis_and_f
 from .kernel import inductance_and_h_sum
+from .io_bnorm import read_bnorm_modes
 
 def _flatten_TZ_to_N3(r_3TZ):
     # (3,T,Z) -> (N,3)
@@ -18,7 +19,7 @@ def build_matrices(inputs, plasma, coil):
     Currently supports:
       - regularization_term_option = chi2_K (default)
       - geometry_option_plasma in {1,2}; geometry_option_coil in {1,2}
-      - load_bnorm not yet supported (Bnormal_from_plasma_current=0)
+      - load_bnorm (bnorm file) for Bnormal_from_plasma_current
     """
     nfp = int(plasma["nfp"])
     ntheta_p = int(inputs["ntheta_plasma"]); nzeta_p = int(inputs["nzeta_plasma"])
@@ -73,7 +74,34 @@ def build_matrices(inputs, plasma, coil):
 
     # h is computed using full plasma normals; convert to Bnormal by dividing by |N_plasma|.
     Bnet = jnp.reshape(h, (ntheta_p, nzeta_p)) / plasma["normN"]
-    Bplasma = jnp.zeros_like(Bnet)
+
+    # Bnormal_from_plasma_current:
+    #   - default is 0 (parity with REGCOIL when load_bnorm=.false.)
+    #   - when load_bnorm=.true., read Fourier modes from file and evaluate:
+    #         sum bf * sin(m*theta + n*nfp*zeta)
+    #     then undo BNORM scaling by multiplying by curpol.
+    load_bnorm = bool(inputs.get("load_bnorm", False))
+    if load_bnorm:
+        bnorm_filename = inputs.get("bnorm_filename", None)
+        if bnorm_filename is None:
+            raise ValueError("load_bnorm=.true. requires bnorm_filename")
+        if "curpol" not in inputs:
+            raise ValueError("load_bnorm requires curpol (set by VMEC wout or specify curpol in the input)")
+        curpol = float(inputs["curpol"])
+
+        m_np, n_np, bf_np = read_bnorm_modes(str(bnorm_filename))
+        if m_np.size == 0:
+            raise ValueError(f"No modes found in bnorm file: {bnorm_filename}")
+        m = jnp.asarray(m_np, dtype=jnp.int32)
+        n = jnp.asarray(n_np, dtype=jnp.int32)
+        bf = jnp.asarray(bf_np, dtype=jnp.float64)
+
+        th = plasma["theta"]
+        ze = plasma["zeta"]
+        ang = m[:, None, None] * th[None, :, None] + (n[:, None, None] * nfp) * ze[None, None, :]
+        Bplasma = jnp.sum(bf[:, None, None] * jnp.sin(ang), axis=0) * curpol
+    else:
+        Bplasma = jnp.zeros_like(Bnet)
     Btarget = Bplasma + Bnet
 
     RHS_B = -(dth_p*dze_p) * (jnp.reshape(Btarget, (-1,)) @ g)  # (nb,)

@@ -82,6 +82,12 @@ def main():
         print(f"[regcoil_jax] input: {input_path_abs}")
     print(f"[regcoil_jax] parsed keys: {sorted(list(inputs.keys()))}")
 
+    # Resolve any filenames relative to the input directory (matching REGCOIL behavior).
+    if "wout_filename" in inputs:
+        inputs["wout_filename"] = _resolve_relpath(str(inputs["wout_filename"]))
+    if "bnorm_filename" in inputs:
+        inputs["bnorm_filename"] = _resolve_relpath(str(inputs["bnorm_filename"]))
+
     # VMEC boundary (optional, used by plasma/coil options 2)
     vmec_surface = None
     gpl = int(inputs.get("geometry_option_plasma", 1))

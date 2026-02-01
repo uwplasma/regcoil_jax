@@ -51,6 +51,14 @@ def _copy_example(tmp_dir: Path, input_name: str) -> Path:
         if wout_src.exists():
             shutil.copy2(wout_src, tmp_dir / Path(wout).name)
 
+    # BNORM-based cases need the bnorm file next to the input.
+    m = re.search(r"bnorm_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
+    if m:
+        bnorm = m.group(1)
+        bnorm_src = Path(bnorm) if os.path.isabs(bnorm) else (src.parent / bnorm)
+        if bnorm_src.exists():
+            shutil.copy2(bnorm_src, tmp_dir / Path(bnorm).name)
+
     return dst
 
 
@@ -149,6 +157,7 @@ def test_examples_match_baselines(tmp_path: Path):
         ("lambda_search_2_current_density_target_too_low", "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low"),
         ("lambda_search_3_current_density_target_too_high", "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high"),
         ("lambda_search_4_chi2_B", "3_advanced/regcoil_in.lambda_search_4_chi2_B"),
+        ("lambda_search_5_with_bnorm", "3_advanced/regcoil_in.lambda_search_5_with_bnorm"),
     ]
 
     expected_exit_codes = {
@@ -158,6 +167,7 @@ def test_examples_match_baselines(tmp_path: Path):
         "lambda_search_2_current_density_target_too_low": -2,
         "lambda_search_3_current_density_target_too_high": -3,
         "lambda_search_4_chi2_B": 0,
+        "lambda_search_5_with_bnorm": 0,
     }
 
     for case_name, input_name in cases:
