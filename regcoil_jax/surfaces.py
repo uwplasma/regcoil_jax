@@ -9,6 +9,7 @@ from .geometry_fourier import FourierSurface, eval_surface_xyz_and_derivs2
 from .offset_surface import offset_surface_point
 from .modes import init_fourier_modes
 from .surface_metrics import metrics_and_normals
+from .io_nescin import read_nescin_current_surface
 
 def _to_3TZ(xyz_TZ3):
     # (T,Z,3) -> (3,T,Z)
@@ -159,6 +160,55 @@ def coil_surface_from_inputs(inputs, plasma, vmec_boundary: FourierSurface | Non
         rtz = _to_3TZ(d2thze)
         rzz = _to_3TZ(d2ze2)
         _, _, _, nunit, normN = metrics_and_normals(rth, rze)
+    elif gopt_eff == 3:
+        # Read the winding surface from a NESCOIL nescin file (REGCOIL geometry_option_coil=3).
+        nescin = inputs.get("nescin_filename", None)
+        if nescin is None:
+            raise ValueError("geometry_option_coil=3 requires nescin_filename")
+
+        surf = read_nescin_current_surface(str(nescin))
+        xm = jnp.asarray(surf.xm, dtype=jnp.int32)
+        # regcoil_read_nescin.f90: xn_coil = -nfp * xn_coil (convert NESCOIL convention to VMEC/REGCOIL convention)
+        xn = jnp.asarray((-nfp) * surf.xn, dtype=jnp.int32)
+
+        rmnc = jnp.asarray(surf.rmnc, dtype=jnp.float64)
+        zmns = jnp.asarray(surf.zmns, dtype=jnp.float64)
+        rmns = jnp.asarray(surf.rmns, dtype=jnp.float64)
+        zmnc = jnp.asarray(surf.zmnc, dtype=jnp.float64)
+
+        # Apply REGCOIL-style filtering if requested.
+        max_mpol_coil = int(inputs.get("max_mpol_coil", 24))
+        max_ntor_coil = int(inputs.get("max_ntor_coil", 24))
+        mpol_coil_filter = int(inputs.get("mpol_coil_filter", max_mpol_coil))
+        ntor_coil_filter = int(inputs.get("ntor_coil_filter", max_ntor_coil))
+        keep = (jnp.abs(xm) <= mpol_coil_filter) & (jnp.abs(xn) <= (ntor_coil_filter * nfp))
+        rmnc = jnp.where(keep, rmnc, 0.0)
+        rmns = jnp.where(keep, rmns, 0.0)
+        zmnc = jnp.where(keep, zmnc, 0.0)
+        zmns = jnp.where(keep, zmns, 0.0)
+
+        # NESCOIL nescin files may include asymmetric coefficients; treat nonzero arrays as lasym.
+        lasym = bool(np.any(np.abs(surf.rmns) > 0.0) or np.any(np.abs(surf.zmnc) > 0.0))
+
+        coil_surf = FourierSurface(
+            nfp=nfp,
+            lasym=lasym,
+            xm=xm,
+            xn=xn,
+            rmnc=rmnc,
+            zmns=zmns,
+            rmns=rmns,
+            zmnc=zmnc,
+        )
+
+        xyz, dth_xyz, dze_xyz, d2th2, d2thze, d2ze2 = eval_surface_xyz_and_derivs2(coil_surf, th, ze)
+        r = _to_3TZ(xyz)
+        rth = _to_3TZ(dth_xyz)
+        rze = _to_3TZ(dze_xyz)
+        rtt = _to_3TZ(d2th2)
+        rtz = _to_3TZ(d2thze)
+        rzz = _to_3TZ(d2ze2)
+        _, _, _, nunit, normN = metrics_and_normals(rth, rze)
     else:
-        raise NotImplementedError(f"geometry_option_coil={gopt} not implemented yet (only 0,1,2).")
+        raise NotImplementedError(f"geometry_option_coil={gopt} not implemented yet (only 0,1,2,3).")
     return dict(theta=th, zeta=ze, r=r, rth=rth, rze=rze, rtt=rtt, rtz=rtz, rzz=rzz, nunit=nunit, normN=normN)

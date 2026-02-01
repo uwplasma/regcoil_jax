@@ -59,6 +59,14 @@ def _copy_example(tmp_dir: Path, input_name: str) -> Path:
         if bnorm_src.exists():
             shutil.copy2(bnorm_src, tmp_dir / Path(bnorm).name)
 
+    # NESCOIL-based cases need the nescin file next to the input.
+    m = re.search(r"nescin_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
+    if m:
+        nescin = m.group(1)
+        nescin_src = Path(nescin) if os.path.isabs(nescin) else (src.parent / nescin)
+        if nescin_src.exists():
+            shutil.copy2(nescin_src, tmp_dir / Path(nescin).name)
+
     return dst
 
 
@@ -159,6 +167,7 @@ def test_examples_match_baselines(tmp_path: Path):
         ("lambda_search_3_current_density_target_too_high", "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high"),
         ("lambda_search_4_chi2_B", "3_advanced/regcoil_in.lambda_search_4_chi2_B"),
         ("lambda_search_5_with_bnorm", "3_advanced/regcoil_in.lambda_search_5_with_bnorm"),
+        ("compareToMatlab2_geometry_option_coil_3", "3_advanced/regcoil_in.compareToMatlab2_geometry_option_coil_3"),
     ]
 
     expected_exit_codes = {
@@ -185,7 +194,12 @@ def test_examples_match_baselines(tmp_path: Path):
         expected = {k: np.array(v, dtype=float) for k, v in baselines[case_name].items()}
 
         for k in expected:
-            _assert_close(actual[k], expected[k])
+            # Most parity cases match extremely tightly (1e-9 relative). For larger, less-conditioned
+            # systems we allow a slightly looser tolerance (still much smaller than "physics" tolerances).
+            if case_name in ("compareToMatlab2_geometry_option_coil_3",):
+                _assert_close(actual[k], expected[k], rtol=1e-7, atol=1e-9)
+            else:
+                _assert_close(actual[k], expected[k])
 
         _assert_output_self_consistent(out_nc)
 

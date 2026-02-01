@@ -1,63 +1,80 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
+from pathlib import Path
+
 import numpy as np
 
-@dataclass(frozen=True)
-class NescinSurface:
-    nfp: int
-    lasym: bool
-    xm: np.ndarray
-    xn: np.ndarray
-    rmnc: np.ndarray
-    zmns: np.ndarray
-    rmns: np.ndarray
-    zmnc: np.ndarray
 
-def read_nescin(path: str) -> NescinSurface:
-    # Minimal NESCOIL nescin reader sufficient for regcoil examples.
-    # Format: header lines then mnmax and nfp etc; robust-ish parsing.
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        lines = [ln.strip() for ln in f if ln.strip()]
-    # Find the line containing mnmax (often second non-empty line)
-    # We'll scan for first line that has 2+ ints.
-    mnmax = None
-    idx = None
-    for i, ln in enumerate(lines[:20]):
-        parts = ln.split()
-        if len(parts) >= 2:
-            try:
-                a = int(parts[0]); b = int(parts[1])
-                # heuristic: mnmax is usually large-ish, nfp small-ish
-                if a > 0 and b > 0:
-                    mnmax = a; nfp = b
-                    idx = i
-                    break
-            except:
-                continue
-    if mnmax is None or idx is None:
-        raise ValueError(f"Could not parse mnmax/nfp from nescin file: {path}")
-    # Next, skip to mode table: find first line that starts with 2 ints and 4 floats after idx
-    table_start = None
-    for i in range(idx+1, len(lines)):
-        parts = lines[i].split()
-        if len(parts) >= 6:
-            try:
-                int(parts[0]); int(parts[1]); float(parts[2]); float(parts[3]); float(parts[4]); float(parts[5])
-                table_start = i
-                break
-            except:
-                continue
-    if table_start is None:
-        raise ValueError(f"Could not find mode table in nescin file: {path}")
-    xm=[]; xn=[]; rmnc=[]; zmns=[]; rmns=[]; zmnc=[]
-    for j in range(table_start, min(table_start+mnmax, len(lines))):
-        parts = lines[j].split()
-        xm.append(int(parts[0])); xn.append(int(parts[1]))
-        rmnc.append(float(parts[2])); zmns.append(float(parts[3]))
-        rmns.append(float(parts[4])); zmnc.append(float(parts[5]))
-    xm=np.array(xm, dtype=int); xn=np.array(xn, dtype=int)
-    rmnc=np.array(rmnc, dtype=float); zmns=np.array(zmns, dtype=float)
-    rmns=np.array(rmns, dtype=float); zmnc=np.array(zmnc, dtype=float)
-    # Many nescin files include asym arrays even if 0.
-    lasym = bool(np.any(np.abs(rmns) > 0) or np.any(np.abs(zmnc) > 0))
-    return NescinSurface(nfp=nfp, lasym=lasym, xm=xm, xn=xn, rmnc=rmnc, zmns=zmns, rmns=rmns, zmnc=zmnc)
+@dataclass(frozen=True)
+class NescinCurrentSurface:
+    """Fourier description of the NESCOIL 'Current Surface' section in a nescin file."""
+
+    xm: np.ndarray  # (mnmax,), int
+    xn: np.ndarray  # (mnmax,), int (as in file, not multiplied by nfp)
+    rmnc: np.ndarray  # (mnmax,), float
+    zmns: np.ndarray  # (mnmax,), float
+    rmns: np.ndarray  # (mnmax,), float
+    zmnc: np.ndarray  # (mnmax,), float
+
+
+def read_nescin_current_surface(path: str | Path) -> NescinCurrentSurface:
+    """Parse the '------ Current Surface' section from a NESCOIL nescin file.
+
+    Matches regcoil_read_nescin.f90 behavior (but does not apply the -nfp scaling/sign flip).
+    """
+    path = Path(path)
+    match = "------ Current Surface"
+    with path.open("r", encoding="utf-8", errors="ignore") as f:
+        lines = f.readlines()
+
+    # Find the start marker line.
+    start = None
+    for i, line in enumerate(lines):
+        if line.startswith(match):
+            start = i
+            break
+    if start is None:
+        raise ValueError(f"Could not find nescin marker {match!r} in {path}")
+
+    # Fortran: after marker line, read(iunit, *) (skip 1 line), read mnmax, then skip 2 lines, then table.
+    i = start + 1
+    if i >= len(lines):
+        raise ValueError(f"Unexpected EOF after {match!r} in {path}")
+
+    # Skip one line (usually: "Number of fourier modes in table")
+    i += 1
+    if i >= len(lines):
+        raise ValueError(f"Unexpected EOF while reading mnmax in {path}")
+
+    # Read mnmax (may be the only token on the line)
+    mnmax = int(lines[i].strip().split()[0])
+    i += 1
+
+    # Skip 2 header lines (typically: "Table of fourier coefficients" and column header)
+    i += 2
+    if i >= len(lines):
+        raise ValueError(f"Unexpected EOF while reading table in {path}")
+
+    xm = np.zeros((mnmax,), dtype=int)
+    xn = np.zeros((mnmax,), dtype=int)
+    rmnc = np.zeros((mnmax,), dtype=float)
+    zmns = np.zeros((mnmax,), dtype=float)
+    rmns = np.zeros((mnmax,), dtype=float)
+    zmnc = np.zeros((mnmax,), dtype=float)
+
+    for k in range(mnmax):
+        if i + k >= len(lines):
+            raise ValueError(f"Unexpected EOF while reading mode {k+1}/{mnmax} in {path}")
+        parts = lines[i + k].strip().replace("D", "E").split()
+        if len(parts) < 6:
+            raise ValueError(f"Malformed nescin table line: {lines[i+k]!r}")
+        xm[k] = int(float(parts[0]))
+        xn[k] = int(float(parts[1]))
+        rmnc[k] = float(parts[2])
+        zmns[k] = float(parts[3])
+        rmns[k] = float(parts[4])
+        zmnc[k] = float(parts[5])
+
+    return NescinCurrentSurface(xm=xm, xn=xn, rmnc=rmnc, zmns=zmns, rmns=rmns, zmnc=zmnc)
+

@@ -12,8 +12,24 @@ The Fortran REGCOIL namelist has many options; this parity-first port currently 
 commonly-used keys:
 
 - ``regularization_term_option``: ``"chi2_K"`` (default), ``"K_xy"``, or ``"Laplace-Beltrami"``
-- ``geometry_option_plasma`` and ``geometry_option_coil``: ``1`` (analytic torus) or ``2`` (VMEC boundary / VMEC-offset)
+- ``geometry_option_plasma``: ``1`` (analytic torus) or ``2`` (VMEC boundary)
+- ``geometry_option_coil``: ``1`` (analytic torus), ``2`` (VMEC offset surface), or ``3`` (NESCOIL ``nescin`` winding surface)
 - ``general_option=5``: lambda search (see the ``examples/3_advanced`` inputs)
+
+Lambda search targets
+---------------------
+
+For ``general_option=5``, REGCOIL searches for a ``lambda`` such that a chosen diagnostic hits ``target_value``.
+This port supports the same target options as the Fortran code:
+
+- ``target_option = "max_K"`` (default)
+- ``target_option = "rms_K"``
+- ``target_option = "chi2_K"``
+- ``target_option = "max_Bnormal"``
+- ``target_option = "rms_Bnormal"``
+- ``target_option = "chi2_B"``
+- ``target_option = "max_K_lse"`` (uses ``target_option_p`` as the log-sum-exp sharpness)
+- ``target_option = "lp_norm_K"`` (uses ``target_option_p`` as the p-norm exponent)
 
 Examples
 --------
