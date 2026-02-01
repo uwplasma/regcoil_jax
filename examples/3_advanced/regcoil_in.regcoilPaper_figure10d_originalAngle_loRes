@@ -1,0 +1,36 @@
+! Port of regcoil/examples/regcoilPaper_figure10d_originalAngle_loRes for regcoil_jax.
+!
+! This case exercises:
+!  - geometry_option_plasma=2 (VMEC boundary)
+!  - geometry_option_coil=3   (NESCOIL nescin winding surface)
+!  - load_bnorm=.true.
+!
+! NOTE: This input is larger than the parity-tested cases and is not run in CI by default.
+
+&regcoil_nml
+  nlambda = 10
+  lambda_min = 1e-15
+  lambda_max = 1e-14
+
+  ntheta_plasma = 64
+  ntheta_coil   = 64
+  nzeta_plasma  = 64
+  nzeta_coil    = 64
+  mpol_potential = 12
+  ntor_potential = 12
+
+  geometry_option_plasma = 2
+  wout_filename = 'wout_d23p4_tm.nc'
+
+  geometry_option_coil=3
+  nescin_filename = 'nescin.d23p4_tm_uniform_0.5m_offset'
+
+  load_bnorm=.t.
+  bnorm_filename='bnorm.d23p4_tm'
+
+  net_poloidal_current_Amperes = 1.0
+  net_toroidal_current_Amperes = 0.0
+
+  symmetry_option = 1
+/
+
