@@ -131,11 +131,21 @@ def build_matrices(inputs, plasma, coil):
 
     return dict(
         nfp=nfp,
+        net_poloidal_current_Amperes=net_pol,
+        net_toroidal_current_Amperes=net_tor,
         # Grids / geometry (for output + diagnostics)
         theta_plasma=plasma["theta"],
         zeta_plasma=plasma["zeta"],
         theta_coil=coil["theta"],
         zeta_coil=coil["zeta"],
+        r_plasma=plasma["r"],
+        r_coil=coil["r"],
+        drdtheta_plasma=plasma["rth"],
+        drdzeta_plasma=plasma["rze"],
+        drdtheta_coil=coil["rth"],
+        drdzeta_coil=coil["rze"],
+        normal_plasma=nP_full,
+        normal_coil=nC_full,
         normN_plasma=plasma["normN"],
         normN_coil=coil["normN"],
         area_plasma=area_plasma,

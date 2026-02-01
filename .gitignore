@@ -12,3 +12,8 @@ build/
 # REGCOIL outputs
 examples/**/regcoil_out*.nc
 examples/**/regcoil_out*.log
+
+# Example postprocessing artifacts
+examples/**/figures_*/
+examples/**/vtk_*/
+examples/**/coils.*

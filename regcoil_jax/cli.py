@@ -206,7 +206,19 @@ def main():
 
     # Output filename like Fortran
     out_path = os.path.join(input_dir, "regcoil_out" + base[10:] + ".nc")
-    write_output_nc(out_path, inputs, mats, lambdas, sols, chi2_B, chi2_K, max_B, max_K)
+    write_output_nc(
+        out_path,
+        inputs,
+        mats,
+        lambdas,
+        sols,
+        chi2_B,
+        chi2_K,
+        max_B,
+        max_K,
+        chosen_idx=idx,
+        exit_code=exit_code,
+    )
     print(f"[regcoil_jax] wrote: {out_path}")
 
     # Also write a small human-readable summary log next to the netCDF file.

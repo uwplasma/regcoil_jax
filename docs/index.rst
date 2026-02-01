@@ -12,3 +12,4 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
    usage
    theory
    parity
+   visualization

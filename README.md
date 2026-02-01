@@ -16,6 +16,12 @@ regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.lambda_searc
 pytest -q
 ```
 
+Postprocess into figures + ParaView files (coil cutting + field lines):
+
+```bash
+python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/3_advanced/regcoil_in.lambda_search_1
+```
+
 JAX-specific demo (autodiff + JIT on a physics kernel):
 
 ```bash
@@ -33,5 +39,6 @@ python examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py
 - ✅ Key scalar arrays (`lambda`, `chi2_B`, `chi2_K`, `max_Bnormal`, `max_K`) match the reference Fortran REGCOIL outputs for these cases.
 - ✅ Supports `load_bnorm=.true.` (BNORM file) to include a nonzero `Bnormal_from_plasma_current`.
 - ✅ Includes pytest regression tests (`tests/`) with stored Fortran baselines.
+- ✅ Includes a coil-cutting + VTK postprocessing example (`docs/visualization.rst`).
 
 See `PORTING_NOTES.md` for details on what was fixed and how to validate parity.

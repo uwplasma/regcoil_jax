@@ -9,3 +9,7 @@ These inputs demonstrate:
 
 Some cases also load a BNORM file (`load_bnorm=.true.`) to include a nonzero
 `Bnormal_from_plasma_current` target field.
+
+Postprocessing:
+- `postprocess_make_figures_and_vtk.py`: generates publication-ready figures and ParaView `.vtp` files
+  (winding surface, plasma surface, cut coils, and filament field lines).
