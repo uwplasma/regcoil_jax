@@ -223,6 +223,27 @@ def write_output_nc(
         except Exception:
             pass
 
+        # Laplace–Beltrami diagnostics field (to match REGCOIL outputs)
+        try:
+            flb = mats["flb"]
+            dLB = mats["d_Laplace_Beltrami"]
+            normNc = mats["normNc"]
+            dth_c = float(mats["dth_c"])
+            dze_c = float(mats["dze_c"])
+            nfp = int(mats.get("nfp", 1))
+
+            # KDifference_Laplace_Beltrami = d_LB - f_LB @ sol
+            KLB = np.asarray(dLB)[None, :] - np.asarray(sols @ np.asarray(flb).T)  # (nlambda, Ncoil)
+            LB2_times_N = (KLB * KLB) / np.asarray(normNc)[None, :]  # |KLB|^2 / |N|
+            chi2_LB = nfp * dth_c * dze_c * np.sum(LB2_times_N, axis=1)
+            ds.createVariable("chi2_Laplace_Beltrami", "f8", ("nlambda",))[:] = chi2_LB
+
+            LB2 = LB2_times_N / np.asarray(normNc)[None, :]  # |KLB|^2
+            LB2 = LB2.reshape(nlambda, ntheta_coil, nzeta_coil).transpose(0, 2, 1)
+            ds.createVariable("Laplace_Beltrami2", "f8", ("nlambda", "nzeta_coil", "ntheta_coil"))[:] = LB2
+        except Exception:
+            pass
+
     # also store (xm,xn) for potential modes if available
     if "xm" in mats and "xn" in mats:
         xm = np.asarray(mats["xm"])

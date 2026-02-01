@@ -77,7 +77,34 @@ def build_basis_and_f(theta_coil, zeta_coil, drdtheta_coil, drdzeta_coil,
     fy = jnp.reshape(f3[1], (-1, nb))
     fz = jnp.reshape(f3[2], (-1, nb))
 
-    # f_LB placeholder (Laplace–Beltrami regularization) for now:
-    flb = jnp.zeros_like(basis)
+    # Laplace–Beltrami operator applied to the basis functions (regcoil_build_matrices.f90).
+    #
+    # flb is used both for:
+    #   - Laplace–Beltrami regularization_term_option
+    #   - diagnostics chi2_Laplace_Beltrami and Laplace_Beltrami2
+    #
+    # norm_normal_coil can be computed from the metric tensor:
+    normN = jnp.sqrt(g_theta_theta * g_zeta_zeta - g_theta_zeta * g_theta_zeta)
+    normN = jnp.where(normN == 0.0, 1.0, normN)
+
+    # mode-dependent coefficients
+    m = xm[None, None, :]  # (1,1,mn)
+    n = xn[None, None, :]
+    coeff = m * LB_dPhi_dtheta_coeff[:, :, None] - n * LB_dPhi_dzeta_coeff[:, :, None]
+    metric_combo = (
+        (m * m) * g_zeta_zeta[:, :, None]
+        + (n * n) * g_theta_theta[:, :, None]
+        + 2.0 * m * n * g_theta_zeta[:, :, None]
+    )
+
+    flb_sin = coeff * cosang + metric_combo * (-sinang) / normN[:, :, None]
+    flb_cos = coeff * (-sinang) + metric_combo * (-cosang) / normN[:, :, None]
+    if symmetry_option == 1:
+        flb_TZB = flb_sin
+    elif symmetry_option == 2:
+        flb_TZB = flb_cos
+    else:
+        flb_TZB = jnp.concatenate([flb_sin, flb_cos], axis=-1)
+    flb = jnp.reshape(flb_TZB, (-1, nb))
 
     return xm, xn, basis, fx, fy, fz, flb
