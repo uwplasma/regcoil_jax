@@ -16,6 +16,13 @@ It writes:
 - ``figures_<case>/``: PNG figures (lambda scan, 2D maps of :math:`B_n`, :math:`|K|`, and :math:`\\Phi`)
 - ``vtk_<case>/``: ParaView-readable ``.vtp`` PolyData files
 
+Optimization example figures
+----------------------------
+
+The autodiff example ``examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py`` writes:
+
+- ``outputs_optimize_coil_radius/``: PNG optimization-history figures and ``.vts`` winding-surface snapshots (initial/final).
+
 VTK / ParaView
 --------------
 
@@ -23,8 +30,10 @@ The postprocessing script writes these VTK files:
 
 - ``coil_surface.vtp``: winding surface mesh with point-data (e.g. ``Phi``, ``Kmag``)
 - ``plasma_surface.vtp``: plasma surface mesh with point-data (e.g. ``Bnormal``)
+- ``coil_surface.vts`` and ``plasma_surface.vts``: structured-grid versions of the same surfaces
 - ``coils.vtp``: filamentary coils obtained by cutting contours of the current potential
 - ``fieldlines.vtp``: field line traces of the *filament-coil* approximation
+- ``B_point_cloud.vtu`` (optional): point cloud of ``B``/``Bmag`` in a 3D box (coil-filament field only)
 
 Open them in ParaView and use the normal visualization pipeline (surface coloring, clipping, etc).
 

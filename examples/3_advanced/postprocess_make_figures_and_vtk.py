@@ -83,6 +83,9 @@ def main():
     parser.add_argument("--fieldline_steps", type=int, default=800)
     parser.add_argument("--fieldline_ds", type=float, default=0.03)
     parser.add_argument("--fieldline_offset", type=float, default=0.15)
+    parser.add_argument("--write_vtu_point_cloud", action="store_true", help="Write a VTU point cloud of |B| from coil filaments.")
+    parser.add_argument("--vtu_n", type=int, default=14, help="Resolution per axis for VTU point cloud (N^3 points).")
+    parser.add_argument("--vtu_margin", type=float, default=0.6, help="Bounding-box margin (meters) for VTU point cloud.")
     args = parser.parse_args()
 
     if netCDF4 is None:  # pragma: no cover
@@ -194,6 +197,17 @@ def main():
     fig, ax = plt.subplots(figsize=(6.5, 4.5))
     im = ax.pcolormesh(zeta_c, theta_c, Phi[ilam].T, shading="auto")
     fig.colorbar(im, ax=ax, label=r"$\\Phi$ [A]")
+    # Overlay the contour levels used for coil cutting (for pedagogy).
+    try:
+        data = Phi[ilam].copy()
+        if abs(net_pol) > np.finfo(float).eps:
+            data = data / net_pol * nfp
+        nlevels = int(2 * int(args.coils_per_half_period))
+        levels = np.linspace(0.0, 1.0, nlevels, endpoint=False)
+        levels = levels + (levels[1] - levels[0]) / 2.0
+        ax.contour(zeta_c, theta_c, data.T, levels=levels, colors="k", linewidths=0.6, alpha=0.6)
+    except Exception:
+        pass
     ax.set_xlabel(r"$\\zeta$")
     ax.set_ylabel(r"$\\theta$")
     ax.set_title(f"Current potential on coil (lambda idx {ilam})")
@@ -205,8 +219,14 @@ def main():
     # Cut coils (filaments) and write MAKECOIL file
     # ----------------------------
     from regcoil_jax.coil_cutting import cut_coils_from_current_potential, write_makecoil_filaments
-    from regcoil_jax.fieldlines import build_filament_field, trace_fieldlines
-    from regcoil_jax.vtk_io import flatten_grid_points, quad_mesh_connectivity, write_vtp_polydata
+    from regcoil_jax.fieldlines import build_filament_field, trace_fieldlines, bfield_from_filaments
+    from regcoil_jax.vtk_io import (
+        flatten_grid_points,
+        quad_mesh_connectivity,
+        write_vtp_polydata,
+        write_vts_structured_grid,
+        write_vtu_point_cloud,
+    )
 
     coils = cut_coils_from_current_potential(
         current_potential_zt=Phi[ilam],
@@ -244,6 +264,15 @@ def main():
             "Kmag": Kmag_full.reshape(-1),
         },
     )
+    # Also write a structured-grid version (ParaView-friendly for some filters).
+    write_vts_structured_grid(
+        vtk_dir / "coil_surface.vts",
+        points_zt3=r_coil,
+        point_data={
+            "Phi": Phi_full,
+            "Kmag": Kmag_full,
+        },
+    )
 
     # Plasma surface VTK
     nzeta_p = zeta_p.size
@@ -259,6 +288,14 @@ def main():
         point_data={
             "Bnormal": B_full.reshape(-1),
             "absBnormal": np.abs(B_full).reshape(-1),
+        },
+    )
+    write_vts_structured_grid(
+        vtk_dir / "plasma_surface.vts",
+        points_zt3=r_plasma,
+        point_data={
+            "Bnormal": B_full,
+            "absBnormal": np.abs(B_full),
         },
     )
 
@@ -315,10 +352,31 @@ def main():
     pts_all = np.concatenate(pts_all, axis=0) if pts_all else np.zeros((0, 3))
     write_vtp_polydata(vtk_dir / "fieldlines.vtp", points=pts_all, lines=lines)
 
+    # ----------------------------
+    # Optional VTU point cloud (|B| in a 3D box), coil-filament field only
+    # ----------------------------
+    if args.write_vtu_point_cloud:
+        n = int(args.vtu_n)
+        margin = float(args.vtu_margin)
+        pts = r_plasma.reshape(-1, 3)
+        lo = pts.min(axis=0) - margin
+        hi = pts.max(axis=0) + margin
+        xs = np.linspace(lo[0], hi[0], n)
+        ys = np.linspace(lo[1], hi[1], n)
+        zs = np.linspace(lo[2], hi[2], n)
+        X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
+        grid = np.stack([X, Y, Z], axis=-1).reshape(-1, 3)
+        B = bfield_from_filaments(field, grid)
+        Bmag = np.linalg.norm(B, axis=1)
+        write_vtu_point_cloud(
+            vtk_dir / "B_point_cloud.vtu",
+            points=grid,
+            point_data={"B": B, "Bmag": Bmag},
+        )
+
     print("[postprocess] wrote VTK:", vtk_dir)
     print("[postprocess] wrote figures:", fig_dir)
 
 
 if __name__ == "__main__":
     main()
-

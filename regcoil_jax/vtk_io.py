@@ -185,3 +185,149 @@ def flatten_grid_points(r_zt3: Any) -> np.ndarray:
         raise ValueError(f"Expected r_zt3 shape (nzeta,ntheta,3), got {r.shape}")
     return r.reshape(-1, 3)
 
+
+def write_vts_structured_grid(
+    path: str | Path,
+    *,
+    points_zt3: Any,
+    point_data: dict[str, Any] | None = None,
+) -> None:
+    """Write a minimal VTK XML StructuredGrid (`.vts`) file for a 2D (zeta,theta) surface.
+
+    We treat the surface as a structured grid with extents:
+      x = zeta index  (0..nzeta-1)
+      y = theta index (0..ntheta-1)
+      z = 0
+
+    VTK expects points ordered with x fastest, then y, then z.
+    """
+    path = Path(path)
+    r = np.asarray(points_zt3, dtype=float)
+    if r.ndim != 3 or r.shape[2] != 3:
+        raise ValueError(f"Expected points_zt3 shape (nzeta,ntheta,3), got {r.shape}")
+    nzeta, ntheta, _ = r.shape
+
+    # Order: y (theta) outer, x (zeta) inner -> flatten (ntheta,nzeta,3) with zeta fastest.
+    pts = r.transpose(1, 0, 2).reshape(-1, 3)
+
+    def _fmt_f(arr: np.ndarray) -> str:
+        return " ".join(f"{x:.16e}" for x in arr.reshape(-1))
+
+    def _write_point_data(f):
+        if not point_data:
+            f.write("      <PointData/>\n")
+            return
+        f.write("      <PointData>\n")
+        for name, arr_any in point_data.items():
+            arr = np.asarray(arr_any)
+            # Accept either already-flat (N,...) or grid-shaped (nzeta,ntheta,...) and re-order to match points.
+            if arr.shape[0] == nzeta and arr.shape[1] == ntheta and arr.ndim >= 2:
+                arr2 = arr.transpose(1, 0, *range(2, arr.ndim)).reshape(pts.shape[0], *arr.shape[2:])
+            else:
+                arr2 = arr
+            if arr2.shape[0] != pts.shape[0]:
+                raise ValueError(f"{name}: expected {pts.shape[0]} points, got {arr2.shape}")
+            if arr2.ndim == 1:
+                ncomp = 1
+                payload = _fmt_f(arr2.astype(float))
+            elif arr2.ndim == 2:
+                ncomp = int(arr2.shape[1])
+                payload = _fmt_f(arr2.astype(float))
+            else:
+                raise ValueError(f"{name}: expected 1D or 2D point array, got shape={arr2.shape}")
+            f.write(
+                f'        <DataArray type="Float64" Name="{name}" NumberOfComponents="{ncomp}" format="ascii">\n'
+            )
+            f.write(f"          {payload}\n")
+            f.write("        </DataArray>\n")
+        f.write("      </PointData>\n")
+
+    with path.open("w", encoding="utf-8") as f:
+        f.write('<?xml version="1.0"?>\n')
+        f.write('<VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian">\n')
+        f.write(f'  <StructuredGrid WholeExtent="0 {nzeta-1} 0 {ntheta-1} 0 0">\n')
+        f.write(f'    <Piece Extent="0 {nzeta-1} 0 {ntheta-1} 0 0">\n')
+        _write_point_data(f)
+        f.write("      <CellData/>\n")
+        f.write("      <Points>\n")
+        f.write('        <DataArray type="Float64" NumberOfComponents="3" format="ascii">\n')
+        f.write(f"          {_fmt_f(pts)}\n")
+        f.write("        </DataArray>\n")
+        f.write("      </Points>\n")
+        f.write("    </Piece>\n")
+        f.write("  </StructuredGrid>\n")
+        f.write("</VTKFile>\n")
+
+
+def write_vtu_point_cloud(
+    path: str | Path,
+    *,
+    points: Any,
+    point_data: dict[str, Any] | None = None,
+) -> None:
+    """Write a minimal VTK XML UnstructuredGrid (`.vtu`) point cloud using VTK_VERTEX cells."""
+    path = Path(path)
+    pts = _as_points(points)
+    n = int(pts.shape[0])
+
+    # One VTK_VERTEX cell per point.
+    connectivity = np.arange(n, dtype=np.int64)
+    offsets = np.arange(1, n + 1, dtype=np.int64)
+    types = np.full((n,), 1, dtype=np.uint8)  # VTK_VERTEX
+
+    def _fmt_f(arr: np.ndarray) -> str:
+        return " ".join(f"{x:.16e}" for x in arr.reshape(-1))
+
+    def _fmt_i(arr: np.ndarray) -> str:
+        return " ".join(str(int(x)) for x in arr.reshape(-1))
+
+    def _write_point_data(f):
+        if not point_data:
+            f.write("      <PointData/>\n")
+            return
+        f.write("      <PointData>\n")
+        for name, arr_any in point_data.items():
+            arr = np.asarray(arr_any)
+            if arr.shape[0] != n:
+                raise ValueError(f"{name}: expected {n} points, got {arr.shape}")
+            if arr.ndim == 1:
+                ncomp = 1
+                payload = _fmt_f(arr.astype(float))
+            elif arr.ndim == 2:
+                ncomp = int(arr.shape[1])
+                payload = _fmt_f(arr.astype(float))
+            else:
+                raise ValueError(f"{name}: expected 1D or 2D point array, got shape={arr.shape}")
+            f.write(
+                f'        <DataArray type="Float64" Name="{name}" NumberOfComponents="{ncomp}" format="ascii">\n'
+            )
+            f.write(f"          {payload}\n")
+            f.write("        </DataArray>\n")
+        f.write("      </PointData>\n")
+
+    with path.open("w", encoding="utf-8") as f:
+        f.write('<?xml version="1.0"?>\n')
+        f.write('<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">\n')
+        f.write("  <UnstructuredGrid>\n")
+        f.write(f'    <Piece NumberOfPoints="{n}" NumberOfCells="{n}">\n')
+        _write_point_data(f)
+        f.write("      <CellData/>\n")
+        f.write("      <Points>\n")
+        f.write('        <DataArray type="Float64" NumberOfComponents="3" format="ascii">\n')
+        f.write(f"          {_fmt_f(pts)}\n")
+        f.write("        </DataArray>\n")
+        f.write("      </Points>\n")
+        f.write("      <Cells>\n")
+        f.write('        <DataArray type="Int64" Name="connectivity" format="ascii">\n')
+        f.write(f"          {_fmt_i(connectivity)}\n")
+        f.write("        </DataArray>\n")
+        f.write('        <DataArray type="Int64" Name="offsets" format="ascii">\n')
+        f.write(f"          {_fmt_i(offsets)}\n")
+        f.write("        </DataArray>\n")
+        f.write('        <DataArray type="UInt8" Name="types" format="ascii">\n')
+        f.write(f"          {_fmt_i(types)}\n")
+        f.write("        </DataArray>\n")
+        f.write("      </Cells>\n")
+        f.write("    </Piece>\n")
+        f.write("  </UnstructuredGrid>\n")
+        f.write("</VTKFile>\n")

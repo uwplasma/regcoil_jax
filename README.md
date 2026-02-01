@@ -13,6 +13,7 @@ regcoil_jax --platform cpu --verbose examples/1_simple/regcoil_in.compareToMatla
 regcoil_jax --platform cpu --verbose examples/1_simple/regcoil_in.compareToMatlab1_option1
 regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.lambda_search_1
 regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.lambda_search_5_with_bnorm
+regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.compareToMatlab2_geometry_option_coil_3
 pytest -q
 ```
 
@@ -20,6 +21,12 @@ Postprocess into figures + ParaView files (coil cutting + field lines):
 
 ```bash
 python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/3_advanced/regcoil_in.lambda_search_1
+```
+
+Optional: include a 3D VTU point cloud of the coil-filament field magnitude:
+
+```bash
+python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --write_vtu_point_cloud --input examples/3_advanced/regcoil_in.lambda_search_1
 ```
 
 JAX-specific demo (autodiff + JIT on a physics kernel):
