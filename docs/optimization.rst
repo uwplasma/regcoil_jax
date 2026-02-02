@@ -132,6 +132,10 @@ research and experimentation:
 - ``docs/differentiable_coil_cutting.rst``
 - ``examples/3_advanced/differentiable_coil_cutting_softcontour.py``
 
+For a more robust (topology-fixed) differentiable coil *set* extraction, see:
+
+- ``examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py``
+
 Poincaré plots and 3D visualization
 -----------------------------------
 

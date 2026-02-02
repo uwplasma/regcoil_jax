@@ -46,7 +46,7 @@ and the (non-unit) normal vector using the REGCOIL convention
    \hat{\mathbf{n}} = \frac{\mathbf{N}}{\|\mathbf{N}\|}
 
 Code mapping
-~~~~~~~~~~~
+~~~~~~~~~~~~
 
 - Fourier surfaces and analytic derivatives: ``regcoil_jax/geometry_fourier.py`` (``FourierSurface``, ``eval_surface_xyz_and_derivs2``)
 - Metric tensors and normals: ``regcoil_jax/surface_metrics.py`` (``metrics_and_normals``)
@@ -78,7 +78,7 @@ The derivatives used throughout are
    \frac{\partial}{\partial\zeta}\cos(m\theta-n\zeta) &= n\sin(m\theta-n\zeta)
 
 Code mapping
-~~~~~~~~~~~
+~~~~~~~~~~~~
 
 - Fourier mode ordering: ``regcoil_jax/modes.py`` (``init_fourier_modes``)
 - Basis + derivative operators: ``regcoil_jax/build_basis.py`` (``build_basis_and_f``)
@@ -106,7 +106,7 @@ Define
    \mathbf{K}(\theta,\zeta) = \frac{\Delta \mathbf{K}(\theta,\zeta)}{\|\mathbf{N}_c(\theta,\zeta)\|}.
 
 Code mapping (core arrays)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
@@ -148,7 +148,7 @@ For any quantity :math:`Q(\theta,\zeta)`, the max-norm diagnostics are
    \max K = \max_{S_c} \|\Delta\mathbf{K}(\theta,\zeta)\|
 
 Code mapping
-~~~~~~~~~~~
+~~~~~~~~~~~~
 
 - Diagnostics: ``regcoil_jax/solve_jax.py`` (``diagnostics``)
 - NetCDF outputs: ``regcoil_jax/io_output.py`` (``chi2_B``, ``chi2_K``, ``max_Bnormal``, ``max_K``)
@@ -166,7 +166,7 @@ REGCOIL solves a symmetric linear system for each :math:`\lambda`. For numerical
 This scaling leaves the solution unchanged but keeps :math:`\mathbf{A}` and :math:`\mathbf{b}` :math:`\mathcal{O}(1)` for very large :math:`\lambda`.
 
 Code mapping
-~~~~~~~~~~~
+~~~~~~~~~~~~
 
 - ``regcoil_jax/solve_jax.py`` (``solve_for_lambdas`` / ``solve_one_lambda``)
 
@@ -217,6 +217,46 @@ Code mapping:
 
 Laplace–Beltrami regularization
 -------------------------------
+
+REGCOIL’s Laplace–Beltrami option regularizes a surface-Laplacian-like operator applied to the current potential
+:math:`\Phi` on the winding surface.
+
+For a parametric surface with coordinates :math:`(\theta,\zeta)`, define the 2D metric tensor
+
+.. math::
+
+   g_{ij} =
+   \begin{pmatrix}
+     g_{\theta\theta} & g_{\theta\zeta} \\
+     g_{\theta\zeta} & g_{\zeta\zeta}
+   \end{pmatrix},
+   \qquad
+   \sqrt{g} = \sqrt{\det(g)}.
+
+The Laplace–Beltrami operator on a scalar field :math:`\Phi(\theta,\zeta)` is
+
+.. math::
+
+   \Delta_s \Phi
+   =
+   \frac{1}{\sqrt{g}}
+   \partial_i\left(\sqrt{g}\, g^{ij}\, \partial_j \Phi\right),
+
+where :math:`g^{ij}` is the inverse metric.
+
+In this codebase, the operator is implemented in a way that matches ``regcoil_build_matrices.f90`` by assembling
+an additional basis matrix ``flb`` representing :math:`\Delta_s \varphi_j` evaluated on the winding-surface grid.
+This matrix is used both for:
+
+- the ``regularization_term_option="Laplace-Beltrami"`` solve, and
+- diagnostics fields/metrics like ``Laplace_Beltrami2`` and ``chi2_Laplace_Beltrami``.
+
+Code mapping
+~~~~~~~~~~~~
+
+- Metric tensor and its derivatives (used to form coefficients): ``regcoil_jax/build_matrices_jax.py``
+- Laplace–Beltrami basis construction: ``regcoil_jax/build_basis.py`` (``flb``)
+- Output fields: ``regcoil_jax/io_output.py`` (``Laplace_Beltrami2``, ``chi2_Laplace_Beltrami``)
 
 Autodiff postprocessing: coil currents after cutting
 ----------------------------------------------------

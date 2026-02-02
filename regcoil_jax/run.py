@@ -237,23 +237,43 @@ def run_regcoil(
         lambdas, sols, chi2_B, chi2_K, max_B, max_K, idx, exit_code = auto_regularization_solve(inputs, mats)
         target_option = str(inputs.get("target_option", "max_K")).strip()
         if target_option in ("max_K_lse", "lp_norm_K"):
-            from .solve_jax import target_quantity
+            import jax
+            from .solve_jax import _target_quantity_from_K_distribution
 
-            vals = []
-            for j in range(int(len(lambdas))):
-                vals.append(
-                    target_quantity(
-                        mats,
-                        sol=sols[j],
-                        chi2_B=chi2_B[j],
-                        chi2_K=chi2_K[j],
-                        max_B=max_B[j],
-                        max_K=max_K[j],
-                        target_option=target_option,
-                        target_option_p=float(inputs.get("target_option_p", 4.0)),
-                    )
+            mode = 0 if target_option == "max_K_lse" else 1
+            p = float(inputs.get("target_option_p", 4.0))
+
+            fx = mats["fx"]
+            fy = mats["fy"]
+            fz = mats["fz"]
+            dx = mats["dx"]
+            dy = mats["dy"]
+            dz = mats["dz"]
+            normNc = mats["normNc"]
+            area_coil = float(mats.get("area_coil"))
+            dth_c = float(mats.get("dth_c"))
+            dze_c = float(mats.get("dze_c"))
+            nfp = int(mats.get("nfp"))
+
+            mats[target_option] = jax.vmap(
+                lambda sol, mK: _target_quantity_from_K_distribution(
+                    fx=fx,
+                    fy=fy,
+                    fz=fz,
+                    dx=dx,
+                    dy=dy,
+                    dz=dz,
+                    normNc=normNc,
+                    area_coil=area_coil,
+                    dth_c=dth_c,
+                    dze_c=dze_c,
+                    nfp=nfp,
+                    sol=sol,
+                    max_K=mK,
+                    target_option_p=p,
+                    mode=mode,
                 )
-            mats[target_option] = jnp.asarray(vals)
+            )(sols, max_K)
     else:
         lambdas = lambda_grid(inputs)
         sols = solve_for_lambdas(mats, lambdas)

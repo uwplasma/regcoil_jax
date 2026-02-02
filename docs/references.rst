@@ -24,4 +24,11 @@ These are not required for typical regcoil_jax workflows, but are useful backgro
 contour/isosurface extraction ideas:
 
 - Remelli et al. (2020). *MeshSDF: Differentiable Iso-Surface Extraction*. NeurIPS 2020.
+- Liao et al. (2018). *Deep Marching Cubes: Learning Explicit Surface Representations*. CVPR 2018.
+- Shen et al. (2021). *Deep Marching Tetrahedra: a Hybrid Representation for High-Resolution 3D Shape Synthesis* (DMTet). NeurIPS 2021.
+- Shen et al. (2023). *Flexible Isosurface Extraction for Gradient-Based Mesh Optimization* (FlexiCubes). SIGGRAPH 2023.
 
+Differentiable relaxations of discrete operators
+------------------------------------------------
+
+- Grover et al. (2019). *Stochastic Optimization of Sorting Networks via Continuous Relaxations* (NeuralSort). arXiv:1903.08850.

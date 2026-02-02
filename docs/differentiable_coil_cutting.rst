@@ -88,3 +88,58 @@ References
 - Hergt et al. (2024). *Global Stellarator Coil Optimization with Quadratic Constraints and Objectives* (“quadcoil”). arXiv:2408.08267.
 - Helander et al. (2020). *Stellarator construction with permanent magnets*. Physical Review Letters 125, 135002.
 - Remelli et al. (2020). *MeshSDF: Differentiable Iso-Surface Extraction*. NeurIPS 2020.
+
+Topology-fixed multi-coil relaxation ("snakes")
+===============================================
+
+If you specifically want **end-to-end differentiability to filamentary coils**, a more practical approach than
+exact contouring is to *fix the topology* (fix the number of coils) and optimize a smooth coil-curve representation.
+
+Representation
+--------------
+
+Represent each coil by a periodic angle curve :math:`\\theta_k(\\zeta)` sampled on the :math:`\\zeta` grid. The
+curve is mapped to XYZ points on the winding surface by interpolating the winding-surface mesh
+:math:`\\mathbf{r}(\\theta,\\zeta)` at :math:`(\\theta_k(\\zeta),\\zeta)`.
+
+Level-set relaxation
+--------------------
+
+Instead of discrete contour extraction, enforce the contour constraint by least squares:
+
+.. math::
+
+   \\Phi(\\zeta,\\theta_k(\\zeta)) \\approx \\Phi_k,
+
+where :math:`\\Phi_k` is a chosen contour level (often uniformly spaced in a normalized potential).
+
+Regularization and topology robustness
+--------------------------------------
+
+To obtain well-behaved coils and avoid collisions in :math:`(\\theta,\\zeta)` coordinates, we add:
+
+- a smoothness penalty on wrapped differences :math:`\\Delta\\theta_k(\\zeta)`,
+- a soft repulsion penalty between coil curves.
+
+This approach is **topology-robust** in the sense that topology is fixed by construction: the number of coils does
+not change, and no discrete split/merge logic is needed.
+
+Implementation
+--------------
+
+- Objective on :math:`\\theta_k(\\zeta)`: ``regcoil_jax.diff_coil_cutting.coil_curves_objective``
+- XYZ mapping: ``regcoil_jax.diff_coil_cutting.coil_curves_polyline_xyz``
+- JAX Biot–Savart on polylines (no NumPy preprocessing): ``regcoil_jax.diff_coil_cutting.bnormal_from_coil_curves``
+
+Example
+-------
+
+This example runs a standard REGCOIL solve, then constructs a differentiable multi-coil filament set and optimizes
+per-coil currents to match the REGCOIL surface-current normal field :math:`B_{sv}`:
+
+.. code-block:: bash
+
+   python examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py --platform cpu
+
+The script writes a loss-history figure and ParaView VTK outputs for the plasma surface, winding surface,
+and coils (before/after).

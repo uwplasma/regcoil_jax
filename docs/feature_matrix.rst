@@ -127,3 +127,4 @@ Beyond-REGCOIL demos
 - Quadcoil-style differentiable diagnostics from :math:`\\nabla_s\\Phi` (coil spacing / total length estimates) are provided in ``regcoil_jax/quadcoil_objectives.py``.
 - Permanent-magnet / coillet workflows using a dipole lattice (ridge least squares + fixed-magnitude relaxation) are provided in ``regcoil_jax/permanent_magnets.py``.
 - Differentiable coil cutting **relaxation demo** (soft contour extraction) is provided in ``regcoil_jax/diff_coil_cutting.py`` (research/pedagogic; not a robust replacement for contouring).
+- Differentiable *topology-fixed* multi-coil extraction (“snakes” relaxation) is provided in ``regcoil_jax/diff_coil_cutting.py`` and demonstrated in ``examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py``.

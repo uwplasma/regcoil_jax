@@ -10,6 +10,12 @@ Goals:
 
 ![regcoil_jax pipeline](docs/_static/regcoil_jax_pipeline.svg)
 
+Example outputs (from `examples/1_simple/regcoil_in.compareToMatlab1`):
+
+![lambda scan](docs/_static/lambda_scan_example.png)
+
+![current potential](docs/_static/current_potential_example.png)
+
 ## Features
 
 - CLI that mirrors REGCOIL’s “input file → output netCDF + log” workflow.
@@ -116,6 +122,12 @@ Differentiable coil cutting (approximate relaxation):
 
 ```bash
 python examples/3_advanced/differentiable_coil_cutting_softcontour.py
+```
+
+Differentiable multi-coil cutting (topology-fixed “snakes” relaxation):
+
+```bash
+python examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py
 ```
 
 ## Tests / Parity

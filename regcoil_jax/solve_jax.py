@@ -102,25 +102,70 @@ def svd_scan(mats):
     U, s, VT = jnp.linalg.svd(A, full_matrices=False)
     UTRHS = U.T @ rhs  # (nb,)
 
-    sol = VT[0] * (UTRHS[0] / s[0])
-
+    # Vectorized equivalent of the Fortran truncation loop.
+    #
+    # Define contributions:
+    #   c_k = V_k * (U^T rhs)_k / s_k
+    # and prefix sums:
+    #   S_k = sum_{i=0..k} c_i
+    #
+    # The Fortran output has nlambda=nb-1 solutions and intentionally skips the k=0-only
+    # solution. Its ilambda indexing corresponds to reversing S_1..S_{nb-1}.
     nlambda = nb - 1
-    sols = []
-    # Fortran loop: do ilambda = nlambda,1,-1; index = nb-ilambda+1 (1-based) => index0 = nb-ilambda (0-based)
-    for ilambda in range(nlambda, 0, -1):
-        index0 = nb - ilambda
-        sol = sol + VT[index0] * (UTRHS[index0] / s[index0])
-        sols.append((ilambda, sol))
-
-    # Put solutions in Fortran's output indexing: sols[ilambda-1] corresponds to that ilambda.
-    sols_arr = [None] * nlambda
-    for ilambda, v in sols:
-        sols_arr[ilambda - 1] = v
-    sols_j = jnp.stack(sols_arr, axis=0)
+    contrib = VT * (UTRHS / s)[:, None]  # (nb, nb)
+    prefix = jnp.cumsum(contrib, axis=0)  # (nb, nb)
+    sols_j = jnp.flip(prefix[1:], axis=0)  # (nb-1, nb)
 
     lambdas = jnp.zeros((nlambda,), dtype=sols_j.dtype)
     chi2_B, chi2_K, max_B, max_K = diagnostics(mats, sols_j)
     return lambdas, sols_j, chi2_B, chi2_K, max_B, max_K
+
+
+@jax.jit
+def _target_quantity_from_K_distribution(
+    *,
+    fx: jnp.ndarray,
+    fy: jnp.ndarray,
+    fz: jnp.ndarray,
+    dx: jnp.ndarray,
+    dy: jnp.ndarray,
+    dz: jnp.ndarray,
+    normNc: jnp.ndarray,
+    area_coil: float,
+    dth_c: float,
+    dze_c: float,
+    nfp: int,
+    sol: jnp.ndarray,
+    max_K: jnp.ndarray,
+    target_option_p: float,
+    mode: int,  # 0=max_K_lse, 1=lp_norm_K
+) -> jnp.ndarray:
+    """JIT-friendly helper for target options that depend on the full K(θ,ζ) distribution."""
+    # Reconstruct |K| on the coil surface in the same way as diagnostics().
+    Kdx = dx - (sol @ fx.T)
+    Kdy = dy - (sol @ fy.T)
+    Kdz = dz - (sol @ fz.T)
+    K2_times_N = (Kdx * Kdx + Kdy * Kdy + Kdz * Kdz) / normNc
+    K2 = K2_times_N / normNc  # |K|^2
+    Kmag = jnp.sqrt(K2)
+
+    p = jnp.asarray(target_option_p, dtype=jnp.float64)
+    maxK = jnp.asarray(max_K, dtype=jnp.float64)
+
+    # weights integrate over the winding surface and normalize by area, matching regcoil_diagnostics.f90
+    w = (float(nfp) * float(dth_c) * float(dze_c)) * (normNc / float(area_coil))
+
+    def max_k_lse():
+        # max_K_lse = (1/p)*log(sum(w*exp(p*(K-maxK)))) + maxK
+        s = jnp.sum(w * jnp.exp(p * (Kmag - maxK)))
+        return (1.0 / p) * jnp.log(s) + maxK
+
+    def lp_norm_k():
+        # lp_norm_K = (∫ |K|^p dA / A)^(1/p)
+        s = jnp.sum(w * (Kmag**p))
+        return s ** (1.0 / p)
+
+    return jax.lax.cond(mode == 0, lambda _: max_k_lse(), lambda _: lp_norm_k(), operand=None)
 
 
 def diagnostics(mats, sols):

@@ -15,6 +15,7 @@ examples/**/regcoil_out.*.nc
 examples/**/regcoil_out.*.log
 examples/**/outputs_*/
 examples/**/figures_*/
+examples/**/coils.*
 examples/**/__pycache__/
 
 # Built docs

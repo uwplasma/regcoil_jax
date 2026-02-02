@@ -99,6 +99,13 @@ original Fortran REGCOIL distribution:
   python examples/3_advanced/differentiable_coil_cutting_softcontour.py
   ```
 
+- Differentiable multi-coil cutting (topology-fixed): optimize smooth θ_k(ζ) curves to satisfy Φ-level constraints,
+  then tune per-coil currents (end-to-end differentiable filament geometry):
+
+  ```bash
+  python examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py
+  ```
+
 You can independently disable figures or VTK outputs:
 
 ```bash
