@@ -14,6 +14,11 @@ Some cases also load a BNORM file (`load_bnorm=.true.`) to include a nonzero
 Larger showcase case (not CI-tested):
 - `regcoil_in.regcoilPaper_figure10d_originalAngle_loRes`: W7-X-like configuration with a NESCOIL winding surface + BNORM.
 - `regcoil_in.regcoilPaper_figure10d_geometry_option_coil_4_loRes`: same equilibrium, but with `geometry_option_coil=4` (constant-arclength theta).
+- `regcoil_in.regcoilPaper_figure10d_but_geometry_option_coil_2_loRes`: same equilibrium, but with `geometry_option_coil=2` (uniform offset surface).
+- `regcoil_in.regcoilPaper_figure10d_but_geometry_option_coil_2`: high-resolution (128×128, mpol/ntor=32) version (slow).
+- `regcoil_in.regcoilPaper_figure10d_originalAngle`: high-resolution original-angle winding surface (slow).
+- `regcoil_in.regcoilPaper_figure10d_constArclengthAngle`: high-resolution equal-arclength winding surface (slow).
+- `regcoil_in.regcoilPaper_figure3_NF4`: NFP=4 example from the REGCOIL paper (li383 equilibrium; slow).
 
 Postprocessing:
 - `postprocess_make_figures_and_vtk.py`: generates publication-ready figures and ParaView `.vtp` files

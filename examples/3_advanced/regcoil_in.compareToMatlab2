@@ -1,0 +1,36 @@
+! Alias of `regcoil_in.compareToMatlab2_geometry_option_coil_3`, kept for naming parity with
+! the original Fortran REGCOIL examples folder.
+!
+! This case exercises:
+!   - plasma surface from VMEC (geometry_option_plasma=2)
+!   - coil/winding surface from NESCOIL nescin file (geometry_option_coil=3)
+!
+! Run:
+!   regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.compareToMatlab2
+
+&regcoil_nml
+  nlambda = 5
+  lambda_min = 1e-30
+  lambda_max = 1
+
+  ntheta_plasma = 32
+  ntheta_coil   = 33
+  nzeta_plasma  = 34
+  nzeta_coil    = 35
+
+  ! Potential-basis resolution:
+  mpol_potential = 15
+  ntor_potential = 8
+
+  geometry_option_plasma = 2
+  wout_filename = 'wout_d23p4_tm.nc'
+
+  geometry_option_coil=3
+  nescin_filename = 'nescin.w7x_winding_surface_from_Drevlak'
+
+  net_poloidal_current_Amperes = 1.4
+  net_toroidal_current_Amperes = 0.3
+
+  symmetry_option = 3
+/
+

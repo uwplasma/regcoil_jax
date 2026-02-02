@@ -1,0 +1,33 @@
+! Alias of `regcoil_in.regcoilPaper_figure10d_geometry_option_coil_4_loRes`, kept for naming parity
+! with the original Fortran REGCOIL examples folder.
+!
+! This case exercises geometry_option_coil=4 (constant-arclength theta on an offset surface).
+! It is not run in CI by default.
+
+&regcoil_nml
+  nlambda = 10
+  lambda_min = 1e-15
+  lambda_max = 1e-14
+
+  ntheta_plasma = 64
+  ntheta_coil   = 64
+  nzeta_plasma  = 64
+  nzeta_coil    = 64
+  mpol_potential = 12
+  ntor_potential = 12
+
+  geometry_option_plasma = 2
+  wout_filename = 'wout_d23p4_tm.nc'
+
+  geometry_option_coil=4
+  separation = 0.5
+
+  load_bnorm=.t.
+  bnorm_filename='bnorm.d23p4_tm'
+
+  net_poloidal_current_Amperes = 1.0
+  net_toroidal_current_Amperes = 0.0
+
+  symmetry_option = 1
+/
+

@@ -1,0 +1,32 @@
+! Port of regcoil/examples/regcoilPaper_figure10d_but_geometry_option_coil_2_loRes for regcoil_jax.
+!
+! This case exercises geometry_option_coil=2 (uniform offset from VMEC plasma surface) with BNORM.
+! It is relatively expensive (VMEC + BNORM) but still “loRes” compared to the paper runs.
+
+&regcoil_nml
+  nlambda = 10
+  lambda_min = 1e-15
+  lambda_max = 1e-14
+
+  ntheta_plasma = 64
+  ntheta_coil   = 64
+  nzeta_plasma  = 64
+  nzeta_coil    = 64
+  mpol_potential = 12
+  ntor_potential = 12
+
+  geometry_option_plasma = 2
+  wout_filename = 'wout_d23p4_tm.nc'
+
+  geometry_option_coil=2
+  separation = 0.5
+
+  load_bnorm=.t.
+  bnorm_filename='bnorm.d23p4_tm'
+
+  net_poloidal_current_Amperes = 1.0
+  net_toroidal_current_Amperes = 0.0
+
+  symmetry_option = 1
+/
+
