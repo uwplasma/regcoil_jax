@@ -1,5 +1,5 @@
 Quadcoil-style objectives (∇Φ diagnostics)
-=========================================
+====================================================
 
 REGCOIL represents coils as **contours of the winding-surface current potential** :math:`\Phi(\theta,\zeta)`.
 This has an important practical consequence:
@@ -78,7 +78,7 @@ Implementation: ``regcoil_jax.quadcoil_objectives.quadcoil_metrics_from_*`` retu
 * ``coil_spacing_rms``: area-weighted RMS of :math:`\Delta s`.
 
 Total contour length estimate (coarea-inspired)
-----------------------------------------------
+----------------------------------------------------------
 
 There is a useful identity (coarea formula) connecting contour lengths to :math:`|\nabla_s \Phi|`:
 
@@ -99,7 +99,7 @@ If contours are cut with uniform spacing :math:`\Delta\Phi`, then a practical es
 Implementation: ``total_contour_length_est``.
 
 Quadratic regularizer on ∫|∇Φ|² dA
----------------------------------
+------------------------------------------------
 
 Since :math:`\Phi_\theta` and :math:`\Phi_\zeta` are *linear* in the Fourier coefficients, the
 integral
@@ -134,4 +134,3 @@ The script produces:
 * coil spacing estimate vs :math:`\lambda`,
 * total coil length estimate vs :math:`\lambda`,
 * optional cut coils + VTK outputs for ParaView.
-

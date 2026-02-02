@@ -135,8 +135,13 @@ class SeparationFieldOptConfig:
     """Configuration for optimizing a spatially-varying offset separation field.
 
     The separation field is parameterized as:
-      sep(θ,ζ) = softplus( b + Σ a_sin*sin(mθ - nζ) + a_cos*cos(mθ - nζ) )
-    where (m,n) are the mode list defined by (mpol_sep, ntor_sep).
+
+    .. math::
+
+       \\mathrm{sep}(\\theta,\\zeta)=\\mathrm{softplus}\\!\\left(b+\\sum_k a_k^{\\sin}\\sin(m_k\\theta-n_k\\zeta)+a_k^{\\cos}\\cos(m_k\\theta-n_k\\zeta)\\right)
+
+    where :math:`(m_k,n_k)` is the mode list defined by :py:attr:`mpol_sep` and
+    :py:attr:`ntor_sep`.
     """
 
     mpol_sep: int = 3
@@ -302,7 +307,10 @@ def nescin_current_surface_from_regcoil_fourier_surface(*, coil_surf: FourierSur
 
     REGCOIL uses angle = m*theta - (n*nfp)*zeta.
     NESCOIL nescin 'Current Surface' uses xn without nfp and opposite sign, and REGCOIL reads via:
-      xn_regcoil = -nfp * xn_nescin.
+
+    ::
+
+        xn_regcoil = -nfp * xn_nescin
     """
     nfp = int(coil_surf.nfp)
     xm = jnp.asarray(coil_surf.xm).astype(int)

@@ -72,7 +72,10 @@ def bfield_from_segments(
     """Magnetic field B(points) from piecewise-linear filaments via midpoint Biot–Savart.
 
     Computes:
-      dB = μ0 I/(4π) * (dl × R) / |R|^3
+
+    .. math::
+
+       d\\mathbf{B} = \\frac{\\mu_0 I}{4\\pi}\\,\\frac{d\\mathbf{l}\\times\\mathbf{R}}{\\lVert\\mathbf{R}\\rVert^3}
 
     Notes on performance:
       - This implementation batches over segments to cap memory.

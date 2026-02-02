@@ -8,6 +8,8 @@ Goals:
 2. **JAX-native workflows**: JIT compilation, autodiff, and optimization-ready APIs (without Fortran adjoints).
 3. **Practical visualization**: publication-quality figures + ParaView outputs (VTK/VTU) and field-line/Poincaré tools.
 
+![regcoil_jax pipeline](docs/_static/regcoil_jax_pipeline.svg)
+
 ## Features
 
 - CLI that mirrors REGCOIL’s “input file → output netCDF + log” workflow.
@@ -101,6 +103,19 @@ Permanent magnets (dipole lattice) to cancel ``Bnormal_from_plasma_current``:
 
 ```bash
 python examples/3_advanced/permanent_magnets_cancel_bplasma.py
+```
+
+Real-geometry stellarator demos (VMEC):
+
+```bash
+python examples/3_advanced/stellarators/LP2021_QA/run_qa_coil_design.py
+python examples/3_advanced/stellarators/LP2021_QA/run_qa_dipole_fit.py
+```
+
+Differentiable coil cutting (approximate relaxation):
+
+```bash
+python examples/3_advanced/differentiable_coil_cutting_softcontour.py
 ```
 
 ## Tests / Parity

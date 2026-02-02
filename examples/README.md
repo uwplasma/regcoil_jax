@@ -86,6 +86,19 @@ original Fortran REGCOIL distribution:
   python examples/3_advanced/permanent_magnets_cancel_bplasma.py
   ```
 
+- Real-geometry stellarator demos (VMEC wout or input.*): cut coils + optimize per-coil currents, and dipole fits:
+
+  ```bash
+  python examples/3_advanced/stellarators/LP2021_QA/run_qa_coil_design.py
+  python examples/3_advanced/stellarators/LP2021_QA/run_qa_dipole_fit.py
+  ```
+
+- Differentiable coil cutting (approximate): soft contour relaxation and gradient-based tuning:
+
+  ```bash
+  python examples/3_advanced/differentiable_coil_cutting_softcontour.py
+  ```
+
 You can independently disable figures or VTK outputs:
 
 ```bash

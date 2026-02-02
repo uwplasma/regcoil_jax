@@ -186,7 +186,10 @@ def optimize_dipole_orientations_fixed_magnitude(
     integer programming approach is not desired.
 
     We parameterize each dipole's moment as:
-      m_i = m0 * v_i / ||v_i||
+    .. math::
+
+       \\mathbf{m}_i = m_0\\,\\frac{\\mathbf{v}_i}{\\lVert\\mathbf{v}_i\\rVert}
+
     with an optional L2 regularization on v_i (to avoid drift).
     """
     pts = jnp.asarray(points, dtype=jnp.float64)

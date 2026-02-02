@@ -43,11 +43,14 @@ def gradphi_squared(
     gtz: jnp.ndarray,
     gzz: jnp.ndarray,
 ) -> jnp.ndarray:
-    """Compute |∇_s Φ|^2 on a parametric surface.
+    """Compute :math:`\\lVert\\nabla_s\\Phi\\rVert^2` on a parametric surface.
 
     Uses:
-      |∇_s Φ|^2 = g^{θθ} Φ_θ^2 + 2 g^{θζ} Φ_θ Φ_ζ + g^{ζζ} Φ_ζ^2
-    where g^{ij} is the inverse of the surface metric tensor.
+    .. math::
+
+       \\lVert\\nabla_s\\Phi\\rVert^2 = g^{\\theta\\theta}\\,\\Phi_\\theta^2 + 2 g^{\\theta\\zeta}\\,\\Phi_\\theta\\Phi_\\zeta + g^{\\zeta\\zeta}\\,\\Phi_\\zeta^2
+
+    where :math:`g^{ij}` is the inverse of the surface metric tensor.
     """
     ginv_tt, ginv_tz, ginv_zz, _ = surface_metric_inverse(gtt=gtt, gtz=gtz, gzz=gzz)
     return ginv_tt * (dphi_dtheta * dphi_dtheta) + 2.0 * ginv_tz * (dphi_dtheta * dphi_dzeta) + ginv_zz * (
@@ -67,15 +70,17 @@ def build_gradphi2_matrix(
     dze: float,
     nfp: int,
 ) -> jnp.ndarray:
-    """Build the quadratic form matrix Q for ∫ |∇_s Φ|^2 dA.
+    """Build the quadratic form matrix :math:`Q` for :math:`\\int \\lVert\\nabla_s\\Phi\\rVert^2\\,dA`.
 
     With coefficients c, define Φ_θ = Dθ c and Φ_ζ = Dζ c on the coil surface grid.
     Then:
-      ∫ |∇_s Φ|^2 dA = c^T Q c
+    .. math::
+
+       \\int \\lVert\\nabla_s\\Phi\\rVert^2\\,dA = c^T Q c
 
     Args:
       dphi_*_basis: (Ncoil, nbasis) flattened derivative basis matrices.
-      normN_coil: (Ncoil,) = |r_ζ × r_θ| on the coil surface.
+      normN_coil: (Ncoil,) surface Jacobian :math:`\\lVert r_\\zeta \\times r_\\theta \\rVert` on the coil surface.
       gtt,gtz,gzz: (Ncoil,) metric tensor components on the coil surface.
     """
     Dth = jnp.asarray(dphi_dtheta_basis, dtype=jnp.float64)

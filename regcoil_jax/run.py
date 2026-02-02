@@ -9,6 +9,7 @@ import numpy as np
 
 from .utils import parse_namelist, resolve_existing_path
 from .io_vmec import read_wout_boundary, compute_curpol_and_G
+from .io_vmec_input import read_vmec_input_boundary, vmec_input_boundary_as_fourier_surface
 
 
 @dataclass(frozen=True)
@@ -97,50 +98,59 @@ def run_regcoil(
         if wout is None:
             raise ValueError("VMEC-based geometry requires wout_filename")
         wout = _resolve_relpath(str(wout))
-        radial_mode = "half" if gpl in (3, 4) else "full"
-        bound = read_wout_boundary(str(wout), radial_mode=radial_mode)
-        curpol, G, nfp, lasym = compute_curpol_and_G(bound)
-        if verbose:
-            print(f"[vmec] nfp={nfp} lasym={lasym} curpol={curpol} G={G}")
-        # Match regcoil_init_plasma_mod.f90 behavior: if a VMEC wout file is used
-        # for the plasma surface, override the net poloidal current.
-        inputs["net_poloidal_current_amperes"] = float(G)
-        inputs["curpol"] = float(curpol)
-        inputs["nfp_imposed"] = int(nfp)
+        if str(wout).endswith(".nc"):
+            radial_mode = "half" if gpl in (3, 4) else "full"
+            bound = read_wout_boundary(str(wout), radial_mode=radial_mode)
+            curpol, G, nfp, lasym = compute_curpol_and_G(bound)
+            if verbose:
+                print(f"[vmec] nfp={nfp} lasym={lasym} curpol={curpol} G={G}")
+            # Match regcoil_init_plasma_mod.f90 behavior: if a VMEC wout file is used
+            # for the plasma surface and VMEC profile arrays are available, override net poloidal current.
+            if (curpol is not None) and (G is not None):
+                inputs["net_poloidal_current_amperes"] = float(G)
+                inputs["curpol"] = float(curpol)
+            inputs["nfp_imposed"] = int(nfp)
 
-        def _as_fourier_surface(b) -> FourierSurface:
-            return FourierSurface(
-                nfp=b.nfp,
-                lasym=b.lasym,
-                xm=jnp.asarray(b.xm, dtype=jnp.int32),
-                xn=jnp.asarray(b.xn, dtype=jnp.int32),
-                rmnc=jnp.asarray(b.rmnc, dtype=jnp.float64),
-                zmns=jnp.asarray(b.zmns, dtype=jnp.float64),
-                rmns=jnp.asarray(b.rmns, dtype=jnp.float64),
-                zmnc=jnp.asarray(b.zmnc, dtype=jnp.float64),
-            )
-
-        vmec_surface = _as_fourier_surface(bound)
-        # For output parity, match R0_plasma to VMEC major radius.
-        try:
-            inputs["r0_plasma"] = float(getattr(bound, "Rmajor_p"))
-        except Exception:
-            pass
-
-        if debug_dir is not None:
-            try:
-                np.savez(
-                    os.path.join(debug_dir, "vmec_boundary_coeffs.npz"),
-                    xm=np.asarray(bound.xm),
-                    xn=np.asarray(bound.xn),
-                    rmnc=np.asarray(bound.rmnc),
-                    zmns=np.asarray(bound.zmns),
-                    rmns=np.asarray(bound.rmns),
-                    zmnc=np.asarray(bound.zmnc),
+            def _as_fourier_surface(b) -> FourierSurface:
+                return FourierSurface(
+                    nfp=b.nfp,
+                    lasym=b.lasym,
+                    xm=jnp.asarray(b.xm, dtype=jnp.int32),
+                    xn=jnp.asarray(b.xn, dtype=jnp.int32),
+                    rmnc=jnp.asarray(b.rmnc, dtype=jnp.float64),
+                    zmns=jnp.asarray(b.zmns, dtype=jnp.float64),
+                    rmns=jnp.asarray(b.rmns, dtype=jnp.float64),
+                    zmnc=jnp.asarray(b.zmnc, dtype=jnp.float64),
                 )
-            except Exception as e:
-                if verbose:
-                    print(f"[regcoil_jax] debug_dir: could not dump vmec boundary coeffs: {e}")
+
+            vmec_surface = _as_fourier_surface(bound)
+            # For output parity, match R0_plasma to VMEC major radius.
+            try:
+                inputs["r0_plasma"] = float(getattr(bound, "Rmajor_p"))
+            except Exception:
+                pass
+
+            if debug_dir is not None:
+                try:
+                    np.savez(
+                        os.path.join(debug_dir, "vmec_boundary_coeffs.npz"),
+                        xm=np.asarray(bound.xm),
+                        xn=np.asarray(bound.xn),
+                        rmnc=np.asarray(bound.rmnc),
+                        zmns=np.asarray(bound.zmns),
+                        rmns=np.asarray(bound.rmns),
+                        zmnc=np.asarray(bound.zmnc),
+                    )
+                except Exception as e:
+                    if verbose:
+                        print(f"[regcoil_jax] debug_dir: could not dump vmec boundary coeffs: {e}")
+        else:
+            # VMEC input boundary only (vacuum-style workflows): use RBC/ZBS (and optional asym terms).
+            vin = read_vmec_input_boundary(str(wout))
+            vmec_surface = vmec_input_boundary_as_fourier_surface(vin)
+            inputs["nfp_imposed"] = int(vin.nfp)
+            if verbose:
+                print(f"[vmec_input] nfp={vin.nfp} lasym={vin.lasym} mnmax={int(vin.xm.size)} file={wout}")
 
     # Build surfaces
     plasma = plasma_surface_from_inputs(inputs, vmec_surface)

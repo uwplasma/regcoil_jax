@@ -10,6 +10,7 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
 
    installation
    usage
+   io_reference
    theory
    parity
    porting_notes
@@ -17,5 +18,8 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
    optimization
    quadcoil_objectives
    permanent_magnets
+   differentiable_coil_cutting
    hybrid_design
    visualization
+   api
+   references

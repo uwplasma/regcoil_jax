@@ -38,7 +38,9 @@ def dipole_bfield(
 
     Uses the standard dipole formula:
 
-      B(r) = μ0/(4π) * ( 3 r (m·r)/|r|^5 - m/|r|^3 )
+    .. math::
+
+       \\mathbf{B}(\\mathbf{r}) = \\frac{\\mu_0}{4\\pi}\\left(\\frac{3\\mathbf{r}(\\mathbf{m}\\cdot\\mathbf{r})}{\\lVert\\mathbf{r}\\rVert^5} - \\frac{\\mathbf{m}}{\\lVert\\mathbf{r}\\rVert^3}\\right)
 
     where r = x - x0, m is the dipole moment, and eps is a softening length to
     avoid numerical blowups near dipole locations.

@@ -130,6 +130,7 @@ def cut_coils_from_current_potential(
     """Cut filamentary coils as current-potential contours (REGCOIL-style).
 
     This is a close port of the `regcoil/cutCoilsFromRegcoil` script:
+
     - Normalize `current_potential` by `net_poloidal_current_Amperes` and scale by `nfp`
       so the secular term spans ~[0,1) over one field period.
     - Extract `2*coils_per_half_period` contours in [0,1) for one field period.

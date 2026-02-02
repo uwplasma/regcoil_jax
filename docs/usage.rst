@@ -17,7 +17,8 @@ commonly-used keys:
 
   - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
   - ``1``: analytic circular torus (``R0_plasma``, ``a_plasma``, ``nfp_imposed``)
-  - ``2``: VMEC boundary (outermost full radial grid point)
+  - ``2``: VMEC boundary (from ``wout_filename``). ``wout_filename`` can be either a VMEC ``wout_*.nc`` file
+    (recommended) or a VMEC ``input.*`` file (boundary-only mode).
   - ``3``: VMEC boundary (outermost half radial grid point, approximated by averaging the last two full-grid surfaces)
   - ``4``: VMEC straight-field-line poloidal coordinate (requires ``wout_filename`` and uses ``mpol_transform_refinement`` / ``ntor_transform_refinement``)
   - ``5``: EFIT gfile (requires ``efit_filename``, uses ``efit_num_modes`` and ``efit_psiN``; ``efit_psiN<1`` uses a coarse-grid interpolation approximation)
@@ -28,7 +29,8 @@ commonly-used keys:
 
   - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
   - ``1``: analytic circular torus (``R0_coil``, ``a_coil``)
-  - ``2``: uniform offset from VMEC plasma boundary (``separation``; Fourier-fit controlled by ``max_mpol_coil``/``max_ntor_coil`` and filters)
+  - ``2``: uniform offset from the VMEC plasma boundary (``separation``; Fourier-fit controlled by ``max_mpol_coil``/``max_ntor_coil`` and filters).
+    Works with VMEC ``wout_*.nc`` or boundary-only VMEC ``input.*`` files.
   - ``3``: winding surface read from a NESCOIL ``nescin`` file (``nescin_filename``)
   - ``4``: constant-arclength theta coordinate on an offset-from-VMEC winding surface (``separation`` and ``constant_arclength_tolerance``)
 - ``general_option=5``: lambda search (see the ``examples/3_advanced`` inputs)

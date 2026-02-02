@@ -96,7 +96,7 @@ to minimize :math:`B\\cdot n` on a target surface, then generates ParaView outpu
 See also ``docs/hybrid_design.rst`` for the dipole equations and objective definition.
 
 Quadcoil-style objectives (coil spacing / length from ∇Φ)
---------------------------------------------------------
+---------------------------------------------------------------
 
 Some coil-quality metrics can be computed directly from the winding-surface current potential :math:`\\Phi(\\theta,\\zeta)`
 and its surface gradient, without explicitly cutting coils. This makes them convenient for:
@@ -121,6 +121,16 @@ See:
 - ``docs/permanent_magnets.rst``
 - ``regcoil_jax/permanent_magnets.py``
 - ``examples/3_advanced/permanent_magnets_cancel_bplasma.py``
+
+Differentiable coil cutting (research demo)
+------------------------------------------------
+
+Coil cutting via exact contour extraction is non-differentiable. This repo includes a **pedagogic**
+relaxation based on soft contour extraction (single-valued :math:`\\theta(\\zeta)`), intended for
+research and experimentation:
+
+- ``docs/differentiable_coil_cutting.rst``
+- ``examples/3_advanced/differentiable_coil_cutting_softcontour.py``
 
 Poincaré plots and 3D visualization
 -----------------------------------

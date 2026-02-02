@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="220" viewBox="0 0 980 220">
+  <style>
+    .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 14; ry: 14; }
+    .title { font: 700 16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #111827; }
+    .text { font: 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #374151; }
+    .arrow { stroke: #6b7280; stroke-width: 2.5; marker-end: url(#arrow); }
+    .pill { fill: #eef2ff; stroke: #6366f1; stroke-width: 1.5; rx: 10; ry: 10; }
+    .pilltext { font: 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #3730a3; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="20" y="45" width="220" height="130" class="box"/>
+  <text x="40" y="78" class="title">Geometry</text>
+  <text x="40" y="106" class="text">VMEC wout / input.*</text>
+  <text x="40" y="128" class="text">EFIT gfile / FOCUS table</text>
+  <text x="40" y="150" class="text">Winding surface options</text>
+
+  <line x1="250" y1="110" x2="320" y2="110" class="arrow"/>
+
+  <rect x="320" y="45" width="260" height="130" class="box"/>
+  <text x="340" y="78" class="title">REGCOIL solve (JAX)</text>
+  <text x="340" y="106" class="text">build matrices (kernel + basis)</text>
+  <text x="340" y="128" class="text">solve for Φ (λ scan / search)</text>
+  <text x="340" y="150" class="text">write netCDF + diagnostics</text>
+
+  <line x1="590" y1="110" x2="650" y2="110" class="arrow"/>
+
+  <rect x="650" y="45" width="310" height="130" class="box"/>
+  <text x="670" y="78" class="title">Postprocessing + autodiff</text>
+  <text x="670" y="106" class="text">cut coils (contours) → filaments</text>
+  <text x="670" y="128" class="text">optimize per-coil currents (autodiff)</text>
+  <text x="670" y="150" class="text">VTK + figures + Poincaré</text>
+
+  <rect x="42" y="16" width="150" height="22" class="pill"/>
+  <text x="52" y="32" class="pilltext">Parity-first netCDF</text>
+
+  <rect x="370" y="16" width="160" height="22" class="pill"/>
+  <text x="380" y="32" class="pilltext">JIT + x64 + batching</text>
+
+  <rect x="710" y="16" width="210" height="22" class="pill"/>
+  <text x="720" y="32" class="pilltext">Optimization + visualization</text>
+</svg>
+

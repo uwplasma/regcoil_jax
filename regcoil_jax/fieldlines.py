@@ -73,7 +73,9 @@ def bfield_from_filaments(field: FilamentField, x: np.ndarray, *, mu0: float = 4
     """Magnetic field from filament segments at point(s) `x`.
 
     Uses a midpoint rule for each segment:
-      dB = μ0 I/(4π) * (dl × R) / |R|^3
+    .. math::
+
+       d\\mathbf{B} = \\frac{\\mu_0 I}{4\\pi}\\,\\frac{d\\mathbf{l}\\times\\mathbf{R}}{\\lVert\\mathbf{R}\\rVert^3}
     """
     x = np.asarray(x, dtype=float)
     single_point = x.ndim == 1

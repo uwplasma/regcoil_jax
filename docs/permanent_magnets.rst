@@ -65,7 +65,7 @@ Notes:
   assemble a dense matrix :math:`A` for large problems.
 
 Fixed-magnitude magnets (smooth relaxation)
-------------------------------------------
+------------------------------------------------
 
 Often magnets are constrained to a fixed magnitude :math:`\|\mathbf{m}_i\| = m_0`.
 This constraint is non-linear. We provide a smooth, differentiable relaxation by parameterizing
@@ -93,4 +93,3 @@ This script:
 2. places dipoles on an offset winding surface,
 3. solves for dipole moments to cancel :math:`B_{\mathrm{plasma}}\cdot n`,
 4. writes figures and ParaView VTK outputs.
-

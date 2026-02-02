@@ -1,0 +1,22 @@
+&regcoil_nml
+  general_option = 1
+
+  ntheta_plasma = 48
+  nzeta_plasma  = 48
+  ntheta_coil   = 48
+  nzeta_coil    = 48
+
+  mpol_potential = 12
+  ntor_potential = 12
+
+  geometry_option_plasma = 2
+  wout_filename = 'input.LandremanPaul2021_QA_lowres'
+
+  geometry_option_coil = 2
+  separation = 0.60
+
+  nlambda = 10
+  lambda_min = 1.0e-19
+  lambda_max = 1.0e-13
+/
+
