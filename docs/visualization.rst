@@ -32,6 +32,16 @@ The autodiff example ``examples/2_intermediate/jax_optimize_coil_radius_full_reg
 
 - ``outputs_optimize_coil_radius/``: PNG optimization-history figures and ``.vts`` winding-surface snapshots (initial/final).
 
+Winding-surface before/after (ParaView)
+---------------------------------------
+
+The advanced autodiff example ``examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py`` writes two full runs:
+
+- ``regcoil_in.winding_surface_autodiff_before`` and corresponding VTK under ``vtk_winding_surface_autodiff_before/``
+- ``regcoil_in.winding_surface_autodiff_after`` and corresponding VTK under ``vtk_winding_surface_autodiff_after/``
+
+Open both ``coil_surface.vtp`` files in ParaView and compare scalars like ``Kmag`` and ``Phi``.
+
 You can disable outputs:
 
 ::

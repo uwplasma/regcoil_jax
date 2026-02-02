@@ -21,6 +21,7 @@ Postprocessing:
 - `run_cli_and_postprocess.py`: wrapper that runs the CLI and (optionally) calls the postprocess script.
 - `compare_fortran_and_jax.py`: runs the local Fortran `regcoil` binary and `regcoil_jax` on the same input and compares outputs.
 - `jax_optimize_separation_vmec_offset.py`: autodiff demo that optimizes the offset-surface separation parameter.
+- `winding_surface_autodiff_optimize_and_visualize.py`: autodiff winding-surface optimization of a *spatially varying* separation field, writing before/after figures + ParaView outputs.
 
 Postprocess toggles:
 - Skip figures: `--no_figures`

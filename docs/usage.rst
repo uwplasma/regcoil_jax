@@ -58,6 +58,8 @@ Two examples highlight “JAX-native” workflows:
 - `examples/2_intermediate/jax_optimize_coil_minor_radius.py`: differentiable toy optimization (fast).
 - `examples/3_advanced/jax_optimize_separation_vmec_offset.py`: optimizes the VMEC offset-surface ``separation`` parameter
   by differentiating through surface construction, matrix build, and the linear solve.
+- `examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py`: optimizes a *spatially varying* ``separation(θ,ζ)``
+  field, then runs and visualizes REGCOIL “before” and “after”.
 
 Geometry-option examples
 ------------------------

@@ -78,3 +78,32 @@ def read_nescin_current_surface(path: str | Path) -> NescinCurrentSurface:
 
     return NescinCurrentSurface(xm=xm, xn=xn, rmnc=rmnc, zmns=zmns, rmns=rmns, zmnc=zmnc)
 
+
+def write_nescin_current_surface(path: str | Path, surf: NescinCurrentSurface) -> None:
+    """Write a minimal NESCOIL nescin file containing the 'Current Surface' section.
+
+    The output is intended to be readable by :func:`read_nescin_current_surface` and by
+    REGCOIL's nescin reader. This is not a full NESCOIL input writer.
+    """
+    path = Path(path)
+    xm = np.asarray(surf.xm, dtype=int).reshape(-1)
+    xn = np.asarray(surf.xn, dtype=int).reshape(-1)
+    rmnc = np.asarray(surf.rmnc, dtype=float).reshape(-1)
+    zmns = np.asarray(surf.zmns, dtype=float).reshape(-1)
+    rmns = np.asarray(surf.rmns, dtype=float).reshape(-1)
+    zmnc = np.asarray(surf.zmnc, dtype=float).reshape(-1)
+    mnmax = int(xm.size)
+    if not (xn.size == mnmax == rmnc.size == zmns.size == rmns.size == zmnc.size):
+        raise ValueError("All coefficient arrays must have the same length.")
+
+    with path.open("w", encoding="utf-8") as f:
+        f.write("------ Current Surface\n")
+        f.write("Number of fourier modes in table\n")
+        f.write(f"{mnmax}\n")
+        f.write("Table of fourier coefficients\n")
+        f.write("m n rmnc zmns rmns zmnc\n")
+        for k in range(mnmax):
+            f.write(
+                f"{int(xm[k]):4d} {int(xn[k]):6d} "
+                f"{rmnc[k]: .16e} {zmns[k]: .16e} {rmns[k]: .16e} {zmnc[k]: .16e}\n"
+            )
