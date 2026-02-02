@@ -1,0 +1,42 @@
+! Sensitivity example (small): compute dchi2/domega for winding-surface Fourier coefficients.
+!
+! This mirrors REGCOIL's sensitivity_option workflow but uses regcoil_jax's autodiff pipeline.
+! Intended to be fast enough to run on CPU and to serve as a strict netCDF parity test.
+!
+! Run via:
+!   regcoil_jax --platform cpu --verbose examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small
+!
+&regcoil_nml
+  geometry_option_plasma = 1
+  R0_plasma = 3.0
+  a_plasma = 1.0
+  nfp_imposed = 1
+
+  geometry_option_coil = 1
+  R0_coil = 3.0
+  a_coil = 1.7
+
+  ntheta_plasma = 16
+  nzeta_plasma  = 16
+  ntheta_coil   = 16
+  nzeta_coil    = 16
+
+  mpol_potential = 6
+  ntor_potential = 6
+  symmetry_option = 1
+
+  regularization_term_option = "chi2_K"
+  nlambda = 4
+  lambda_min = 1e-18
+  lambda_max = 1e-12
+
+  net_poloidal_current_amperes = 1.0
+  net_toroidal_current_amperes = 0.0
+
+  ! Sensitivity (winding surface Fourier coefficients):
+  sensitivity_option = 2
+  mmax_sensitivity = 1
+  nmax_sensitivity = 1
+  sensitivity_symmetry_option = 1
+  coil_plasma_dist_lse_p = 1.0d4
+/

@@ -65,6 +65,7 @@ def write_output_nc(
         curpol=1.0,
         sensitivity_option=1,
     )
+    sensitivity_option = int(inputs.get("sensitivity_option", defaults["sensitivity_option"]))
 
     # Grid sizes and arrays (single field period for theta/zeta; full torus for r_* etc.)
     theta_p = np.asarray(mats.get("theta_plasma"))
@@ -103,6 +104,13 @@ def write_output_nc(
     ds.createDimension("mnmax_coil", mnmax_coil)
     ds.createDimension("ntheta_nzeta_plasma", ntheta_plasma * nzeta_plasma)
     ds.createDimension("num_basis_functions", nb)
+    if sensitivity_option > 1:
+        nomega = int(mats.get("nomega_coil", 0))
+        ds.createDimension("nomega_coil", nomega)
+        # Match the reference Fortran netCDF schema: one of the sensitivity vectors
+        # (darea_coildomega) ends up associated with an auto-generated dimension name
+        # of the form dim_00010 (for nomega=10). Preserve this for strict parity.
+        ds.createDimension(f"dim_{nomega:05d}", nomega)
 
     # Scalars (names match regcoil_write_output.f90)
     ds.createVariable("nfp", "i4")[...] = int(nfp)
@@ -160,7 +168,23 @@ def write_output_nc(
     ds.createVariable("nlambda", "i4")[...] = int(nlambda)
     ds.createVariable("total_time", "f8")[...] = float(total_time) if total_time is not None else np.nan
     ds.createVariable("exit_code", "i4")[...] = int(exit_code)
-    ds.createVariable("sensitivity_option", "i4")[...] = int(inputs.get("sensitivity_option", defaults["sensitivity_option"]))
+    ds.createVariable("sensitivity_option", "i4")[...] = int(sensitivity_option)
+    if sensitivity_option > 1:
+        ds.createVariable("nmax_sensitivity", "i4")[...] = int(inputs.get("nmax_sensitivity", 0))
+        ds.createVariable("mmax_sensitivity", "i4")[...] = int(inputs.get("mmax_sensitivity", 0))
+        ds.createVariable("mnmax_sensitivity", "i4")[...] = int(mats.get("mnmax_sensitivity", 0))
+        ds.createVariable("nomega_coil", "i4")[...] = int(mats.get("nomega_coil", 0))
+        ds.createVariable("sensitivity_symmetry_option", "i4")[...] = int(inputs.get("sensitivity_symmetry_option", 1))
+        # The Fortran netCDF wrapper stores logicals as int scalars with a __logical__ suffix.
+        ds.createVariable("fixed_norm_sensitivity_option__logical__", "i4")[...] = int(
+            mats.get("fixed_norm_sensitivity_option", int(bool(inputs.get("fixed_norm_sensitivity_option", False))))
+        )
+
+        ds.createVariable("coil_plasma_dist_min", "f8")[...] = float(np.asarray(mats.get("coil_plasma_dist_min", np.nan)))
+        ds.createVariable("coil_plasma_dist_max", "f8")[...] = float(np.asarray(mats.get("coil_plasma_dist_max", np.nan)))
+        ds.createVariable("coil_plasma_dist_lse_p", "f8")[...] = float(inputs.get("coil_plasma_dist_lse_p", 1.0e4))
+        ds.createVariable("coil_plasma_dist_min_lse", "f8")[...] = float(np.asarray(mats.get("coil_plasma_dist_min_lse", np.nan)))
+        ds.createVariable("coil_plasma_dist_max_lse", "f8")[...] = float(np.asarray(mats.get("coil_plasma_dist_max_lse", np.nan)))
 
     if general_option in (4, 5):
         # Match regcoil_auto_regularization_solve.f90:
@@ -233,6 +257,28 @@ def write_output_nc(
     if target_option == "lp_norm_K":
         ds.createVariable("lp_norm_K", "f8", ("nlambda",))[:] = np.asarray(mats.get("lp_norm_K", np.full((nlambda,), np.nan)), dtype=float)
 
+    if sensitivity_option > 1:
+        nomega = int(mats.get("nomega_coil", 0))
+        dim_area = f"dim_{nomega:05d}"
+        ds.createVariable("xn_sensitivity", "i4", ("nomega_coil",))[:] = np.asarray(
+            mats.get("xn_sensitivity", np.zeros((nomega,), dtype=np.int32)), dtype=np.int32
+        )
+        ds.createVariable("xm_sensitivity", "i4", ("nomega_coil",))[:] = np.asarray(
+            mats.get("xm_sensitivity", np.zeros((nomega,), dtype=np.int32)), dtype=np.int32
+        )
+        ds.createVariable("omega_coil", "i4", ("nomega_coil",))[:] = np.asarray(
+            mats.get("omega_coil", np.zeros((nomega,), dtype=np.int32)), dtype=np.int32
+        )
+        ds.createVariable("dvolume_coildomega", "f8", ("nomega_coil",))[:] = np.asarray(
+            mats.get("dvolume_coildomega", np.full((nomega,), np.nan)), dtype=float
+        )
+        ds.createVariable("darea_coildomega", "f8", (dim_area,))[:] = np.asarray(
+            mats.get("darea_coildomega", np.full((nomega,), np.nan)), dtype=float
+        )
+        ds.createVariable("dcoil_plasma_dist_mindomega", "f8", ("nomega_coil",))[:] = np.asarray(
+            mats.get("dcoil_plasma_dist_mindomega", np.full((nomega,), np.nan)), dtype=float
+        )
+
     # Arrays (dimension 2)
     normN_p = np.asarray(mats.get("normN_plasma"), dtype=float)
     normN_c = np.asarray(mats.get("normN_coil"), dtype=float)
@@ -260,6 +306,17 @@ def write_output_nc(
 
     # single_valued_current_potential_mn: Fortran uses (num_basis_functions, nlambda) but appears as (nlambda, num_basis_functions).
     ds.createVariable("single_valued_current_potential_mn", "f8", ("nlambda", "num_basis_functions"))[:] = np.asarray(sols, dtype=float)
+
+    if sensitivity_option > 1 and int(exit_code) == 0:
+        if "dchi2domega" in mats:
+            ds.createVariable("dchi2domega", "f8", ("nlambda", "nomega_coil"))[:] = np.asarray(mats["dchi2domega"], dtype=float).T
+        if sensitivity_option > 2:
+            if "dchi2Bdomega" in mats:
+                ds.createVariable("dchi2Bdomega", "f8", ("nlambda", "nomega_coil"))[:] = np.asarray(mats["dchi2Bdomega"], dtype=float).T
+            if "dchi2Kdomega" in mats:
+                ds.createVariable("dchi2Kdomega", "f8", ("nlambda", "nomega_coil"))[:] = np.asarray(mats["dchi2Kdomega"], dtype=float).T
+            if "dRMSKdomega" in mats:
+                ds.createVariable("dRMSKdomega", "f8", ("nlambda", "nomega_coil"))[:] = np.asarray(mats["dRMSKdomega"], dtype=float).T
 
     # Optional fields for improved parity & testability.
     # Arrays (dimension 3)

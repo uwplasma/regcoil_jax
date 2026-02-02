@@ -16,6 +16,7 @@ Goals:
   - Coil ``geometry_option_coil``: ``{0,1,2,3,4}`` (analytic torus, VMEC offsets, NESCOIL surfaces).
 - Regularization terms: ``{"chi2_K","K_xy","K_zeta","Laplace-Beltrami"}``.
 - Execution modes: ``general_option`` in ``{1,2,3,4,5}`` (scan, diagnostics, SVD scan, lambda search).
+- Sensitivity outputs: ``sensitivity_option>1`` writes winding-surface Fourier-coefficient sensitivities (``dchi2domega``) using autodiff.
 - Coil cutting into filament sets, per-coil currents, Biot–Savart field evaluation, and Poincaré sections.
 
 Notes:

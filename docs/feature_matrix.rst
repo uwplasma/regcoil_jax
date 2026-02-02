@@ -100,8 +100,11 @@ Derivatives / optimization
      - Status
      - Notes
    * - Adjoint sensitivities (Fortran)
-     - TODO
-     - Not ported; regcoil_jax targets autodiff instead
+     - N/A
+     - regcoil_jax targets autodiff instead (no Fortran adjoint port)
+   * - Sensitivity outputs (``sensitivity_option>1``)
+     - OK
+     - ``xm_sensitivity``, ``xn_sensitivity``, ``omega_coil`` and autodiff-based ``dchi2domega`` parity-tested in ``examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small``
    * - Autodiff through solve pipeline
      - OK
      - JAX differentiates through geometry → matrices → solve → diagnostics

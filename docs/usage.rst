@@ -34,6 +34,9 @@ commonly-used keys:
 - ``general_option=2``: compute diagnostics for one or more NESCOIL current potentials stored in ``nescout_filename``
   (see ``examples/2_intermediate/regcoil_in.torus_nescout_diagnostics``)
 - ``general_option=3``: emulate NESCOIL’s truncated SVD scan (see ``examples/2_intermediate/regcoil_in.torus_svd_scan``)
+- ``sensitivity_option``: when ``>1``, write winding-surface sensitivity outputs in the netCDF file
+  (see ``examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small``). This requires
+  ``mmax_sensitivity>=1`` and ``nmax_sensitivity>=1``.
 
 Lambda search targets
 ---------------------
@@ -90,6 +93,13 @@ For an input file named ``regcoil_in.<case>``, the CLI writes next to the input:
 
 - ``regcoil_out.<case>.nc``
 - ``regcoil_out.<case>.log``
+
+When ``sensitivity_option > 1``, additional output variables are included to mirror REGCOIL’s winding-surface
+Fourier-coefficient sensitivity workflow, including:
+
+- ``xm_sensitivity``, ``xn_sensitivity``, ``omega_coil`` (mode list and coefficient-family codes)
+- ``dchi2domega`` (objective sensitivity vs ``omega`` for each lambda)
+- geometry-only sensitivities like ``darea_coildomega`` and ``dvolume_coildomega``
 
 Tests
 -----

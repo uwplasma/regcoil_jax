@@ -38,3 +38,15 @@ If you have the Fortran executable available locally (typically ``../regcoil/reg
    python scripts/generate_fortran_reference_outputs.py
 
 See ``docs/porting_notes.rst`` for additional notes and troubleshooting.
+
+Sensitivity schema notes
+------------------------
+
+For ``sensitivity_option > 1``, the reference Fortran implementation (as bundled in this workspace) includes a few
+netCDF schema quirks that are preserved for strict parity:
+
+- Fortran logicals appear as integer scalars with the suffix ``__logical__`` (e.g. ``fixed_norm_sensitivity_option__logical__``).
+- One sensitivity vector in the reference output is associated with an auto-generated dimension name of the form
+  ``dim_00010`` (size depends on ``nomega_coil``).
+
+These details are replicated by ``regcoil_jax/io_output.py`` so tests can enforce exact schema parity.

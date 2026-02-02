@@ -11,6 +11,29 @@ In ``regcoil_jax``, the preferred approach is to use **automatic differentiation
 
 This section documents the main autodiff/optimization entry points and the examples that exercise them.
 
+Sensitivity outputs (omega / ``dchi2domega``)
+---------------------------------------------
+
+The Fortran REGCOIL code can write *sensitivities of the objective* with respect to a Fourier
+parameterization of the winding surface (often used by the bundled winding-surface optimization scripts).
+
+In ``regcoil_jax``, these sensitivities are produced using **autodiff** through the full pipeline
+(surface evaluation → matrix assembly → dense solve → diagnostics) when ``sensitivity_option > 1``.
+
+Key inputs:
+
+- ``sensitivity_option``: enable sensitivity output variables (``>1``)
+- ``mmax_sensitivity``, ``nmax_sensitivity``: Fourier truncation for the sensitivity mode list (both must be ``>=1``)
+- ``sensitivity_symmetry_option``: which Fourier coefficient families are included (matches Fortran):
+
+  - ``1``: stellarator symmetric (``omega_coil`` in {1=rmnc, 2=zmns})
+  - ``2``: even in ``theta`` and ``zeta`` (``omega_coil`` in {3=rmns, 4=zmnc})
+  - ``3``: no symmetry (all families)
+
+Example input (strict netCDF parity-tested against Fortran output):
+
+``examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small``
+
 Winding surface optimization (autodiff)
 ---------------------------------------
 
@@ -66,4 +89,3 @@ The postprocessing pipeline supports ParaView outputs for:
 - Poincaré section points (`poincare_points.vtp`)
 
 Enable Poincaré output in the shared postprocess script with ``--poincare``.
-

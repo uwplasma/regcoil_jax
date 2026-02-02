@@ -260,6 +260,7 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "2_intermediate/regcoil_in.torus_nescout_diagnostics",
         "2_intermediate/regcoil_in.lambda_search_option4_torus",
         "2_intermediate/regcoil_in.plasma_option_5_efit_lcfs",
+        "2_intermediate/regcoil_in.torus_sensitivity_option2_small",
         "3_advanced/regcoil_in.lambda_search_1",
         "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low",
         "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high",

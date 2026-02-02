@@ -53,6 +53,7 @@ def run_regcoil(
     from .build_matrices_jax import build_matrices
     from .solve_jax import lambda_grid, solve_for_lambdas, diagnostics, choose_lambda, auto_regularization_solve, svd_scan
     from .io_output import write_output_nc
+    from .sensitivity_jax import compute_sensitivity_outputs
 
     input_path = resolve_existing_path(input_path)
     input_path_abs = os.path.abspath(input_path)
@@ -250,6 +251,19 @@ def run_regcoil(
         idx = choose_lambda(inputs, lambdas, chi2_B, chi2_K, max_B, max_K)
         exit_code = 0
     t1_solve = _time.perf_counter()
+
+    # Optional sensitivity outputs (winding surface Fourier-coefficient derivatives).
+    sensitivity_option = int(inputs.get("sensitivity_option", 1))
+    if sensitivity_option > 1:
+        if verbose:
+            print("[regcoil_jax] computing sensitivity outputs (autodiff; may take a while)...")
+        try:
+            sens = compute_sensitivity_outputs(inputs=inputs, plasma=plasma, coil=coil, lambdas=lambdas, exit_code=exit_code)
+        except Exception as e:
+            if verbose:
+                print(f"[regcoil_jax] ERROR: sensitivity output computation failed: {e}")
+            raise
+        mats.update(sens)
 
     out_nc = os.path.join(input_dir, "regcoil_out" + base[10:] + ".nc")
     t1_total = _time.perf_counter()
