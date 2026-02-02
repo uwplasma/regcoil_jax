@@ -107,4 +107,8 @@ def build_basis_and_f(theta_coil, zeta_coil, drdtheta_coil, drdzeta_coil,
         flb_TZB = jnp.concatenate([flb_sin, flb_cos], axis=-1)
     flb = jnp.reshape(flb_TZB, (-1, nb))
 
-    return xm, xn, basis, fx, fy, fz, flb
+    # Flatten derivatives too (useful for differentiable diagnostics / quadcoil-style objectives).
+    dphi_dtheta = jnp.reshape(dPhi_dtheta_TZB, (-1, nb))
+    dphi_dzeta = jnp.reshape(dPhi_dzeta_TZB, (-1, nb))
+
+    return xm, xn, basis, fx, fy, fz, flb, dphi_dtheta, dphi_dzeta

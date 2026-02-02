@@ -72,6 +72,20 @@ original Fortran REGCOIL distribution:
   python examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py
   ```
 
+- Quadcoil-style diagnostics from the winding-surface potential (estimate coil spacing and total coil length from ∇Φ),
+  with optional coil cutting and VTK output:
+
+  ```bash
+  python examples/3_advanced/quadcoil_style_spacing_length_scan.py --cut_coils
+  ```
+
+- Permanent magnets / dipole lattice workflow: place dipoles near the winding surface and solve for their moments to cancel
+  ``Bnormal_from_plasma_current`` on the plasma surface:
+
+  ```bash
+  python examples/3_advanced/permanent_magnets_cancel_bplasma.py
+  ```
+
 You can independently disable figures or VTK outputs:
 
 ```bash

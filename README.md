@@ -91,6 +91,18 @@ Hybrid (few loops + many dipoles) B·n optimization + Poincaré:
 python examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py
 ```
 
+Quadcoil-style ∇Φ diagnostics (coil spacing / total coil length estimates) + optional coil cutting:
+
+```bash
+python examples/3_advanced/quadcoil_style_spacing_length_scan.py --cut_coils
+```
+
+Permanent magnets (dipole lattice) to cancel ``Bnormal_from_plasma_current``:
+
+```bash
+python examples/3_advanced/permanent_magnets_cancel_bplasma.py
+```
+
 ## Tests / Parity
 
 Run the main test suite:
@@ -115,3 +127,5 @@ User documentation lives in ``docs/`` (Sphinx). Key pages:
 - ``docs/theory.rst``: equations and code mapping
 - ``docs/parity.rst``: what is checked and how to regenerate baselines
 - ``docs/visualization.rst``: figures + ParaView outputs
+- ``docs/quadcoil_objectives.rst``: coil spacing/length diagnostics from ∇Φ
+- ``docs/permanent_magnets.rst``: dipole lattice workflows

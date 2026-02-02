@@ -95,6 +95,33 @@ to minimize :math:`B\\cdot n` on a target surface, then generates ParaView outpu
 
 See also ``docs/hybrid_design.rst`` for the dipole equations and objective definition.
 
+Quadcoil-style objectives (coil spacing / length from ∇Φ)
+--------------------------------------------------------
+
+Some coil-quality metrics can be computed directly from the winding-surface current potential :math:`\\Phi(\\theta,\\zeta)`
+and its surface gradient, without explicitly cutting coils. This makes them convenient for:
+
+- diagnostics during lambda scans, and
+- differentiable regularizers on the current potential.
+
+See:
+
+- ``docs/quadcoil_objectives.rst`` (derivations and normalizations)
+- ``regcoil_jax/quadcoil_objectives.py`` (implementations)
+- ``examples/3_advanced/quadcoil_style_spacing_length_scan.py`` (end-to-end demo + plots)
+
+Permanent magnets (dipole lattices)
+-----------------------------------
+
+Permanent magnets (or small coillets) can be modeled as a lattice of point dipoles placed on / near
+the winding surface, with their moments optimized to cancel :math:`B_{\\mathrm{plasma}}\\cdot n` or other targets.
+
+See:
+
+- ``docs/permanent_magnets.rst``
+- ``regcoil_jax/permanent_magnets.py``
+- ``examples/3_advanced/permanent_magnets_cancel_bplasma.py``
+
 Poincaré plots and 3D visualization
 -----------------------------------
 

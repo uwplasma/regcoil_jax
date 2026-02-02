@@ -124,3 +124,5 @@ Beyond-REGCOIL demos
 
 - Coil cutting + per-coil current optimization (autodiff through Biot–Savart) is implemented and demonstrated.
 - Hybrid “few loops + many dipoles” optimization is provided as a pedagogic example (not part of Fortran parity goals).
+- Quadcoil-style differentiable diagnostics from :math:`\\nabla_s\\Phi` (coil spacing / total length estimates) are provided in ``regcoil_jax/quadcoil_objectives.py``.
+- Permanent-magnet / coillet workflows using a dipole lattice (ridge least squares + fixed-magnitude relaxation) are provided in ``regcoil_jax/permanent_magnets.py``.

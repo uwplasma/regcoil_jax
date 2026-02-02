@@ -6,6 +6,7 @@ from .build_basis import build_basis_and_f
 from .kernel import inductance_and_h_sum
 from .io_bnorm import read_bnorm_modes
 from .spectral_deriv import deriv_theta, deriv_zeta
+from .quadcoil_objectives import build_gradphi2_matrix
 
 def _flatten_TZ_to_N3(r_3TZ):
     # (3,T,Z) -> (N,3)
@@ -98,7 +99,7 @@ def build_matrices(inputs, plasma, coil):
         + (gtz * d_N_d_theta - gtt * d_N_d_zeta) / normN_safe
     ) / normN_safe
 
-    xm, xn, basis, fx, fy, fz, flb = build_basis_and_f(
+    xm, xn, basis, fx, fy, fz, flb, dphi_dtheta_basis, dphi_dzeta_basis = build_basis_and_f(
         coil["theta"], coil["zeta"], coil["rth"], coil["rze"],
         gtt, gtz, gzz, LB_dPhi_dtheta_coeff, LB_dPhi_dzeta_coeff,
         mpol_pot, ntor_pot, nfp, symmetry_option
@@ -236,6 +237,27 @@ def build_matrices(inputs, plasma, coil):
     else:
         raise ValueError(f"Unsupported regularization_term_option={reg_opt!r}")
 
+    # Quadcoil-style regularization on |∇_s Φ|^2 (purely on the winding-surface current potential).
+    # This term is quadratic in the coefficients and can be included as an additional matrix.
+    gradphi2_weight = float(inputs.get("gradphi2_weight", 0.0))
+    if gradphi2_weight != 0.0:
+        normNc = _flatten_TZ_to_N(coil["normN"])
+        gtt_flat = _flatten_TZ_to_N(gtt)
+        gtz_flat = _flatten_TZ_to_N(gtz)
+        gzz_flat = _flatten_TZ_to_N(gzz)
+        Q = build_gradphi2_matrix(
+            dphi_dtheta_basis=dphi_dtheta_basis,
+            dphi_dzeta_basis=dphi_dzeta_basis,
+            normN_coil=normNc,
+            gtt=gtt_flat,
+            gtz=gtz_flat,
+            gzz=gzz_flat,
+            dth=dth_c,
+            dze=dze_c,
+            nfp=nfp,
+        )
+        matrix_reg = matrix_reg + gradphi2_weight * Q
+
     area_plasma = nfp * dth_p * dze_p * jnp.sum(plasma["normN"])
     area_coil = nfp * dth_c * dze_c * jnp.sum(coil["normN"])
 
@@ -295,9 +317,14 @@ def build_matrices(inputs, plasma, coil):
         g_over_Np=g_over_Np,
         fx=fx, fy=fy, fz=fz,
         flb=flb,
+        dphi_dtheta_basis=dphi_dtheta_basis,
+        dphi_dzeta_basis=dphi_dzeta_basis,
         dx=dx, dy=dy, dz=dz,
         d_Laplace_Beltrami=d_LB,
         normNp=normNp, normNc=normNc,
+        gtt_coil=gtt,
+        gtz_coil=gtz,
+        gzz_coil=gzz,
         Bnet=Bnet, Bplasma=Bplasma,
         matrix_B=matrix_B, RHS_B=RHS_B,
         matrix_reg=matrix_reg, RHS_reg=RHS_reg,

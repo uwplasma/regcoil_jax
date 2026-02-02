@@ -12,6 +12,7 @@ The Fortran REGCOIL namelist has many options; this parity-first port currently 
 commonly-used keys:
 
 - ``regularization_term_option``: ``"chi2_K"`` (default), ``"K_xy"``, ``"K_zeta"``, or ``"Laplace-Beltrami"``
+- ``gradphi2_weight``: optional additional regularization weight on :math:`\int |\nabla_s \Phi|^2 dA` (Quadcoil-style; see ``docs/quadcoil_objectives.rst``)
 - ``geometry_option_plasma``:
 
   - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
