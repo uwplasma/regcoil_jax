@@ -24,6 +24,11 @@ The tests also verify output-file self-consistency by recomputing these quantiti
 This parity set now includes a VMEC + BNORM example (`load_bnorm=.true.`), so nonzero `Bnormal_from_plasma_current`
 is covered by regression tests.
 
+Additional parity-tested control-flow paths:
+- `general_option=2`: diagnostics for one or more NESCOIL `nescout` current potentials (example: `examples/2_intermediate/regcoil_in.torus_nescout_diagnostics`).
+- `general_option=3`: NESCOIL-style truncated SVD scan (example: `examples/2_intermediate/regcoil_in.torus_svd_scan`).
+- `general_option=4`: lambda search without feasibility checks (example: `examples/2_intermediate/regcoil_in.lambda_search_option4_torus`).
+
 ## Example folder structure
 
 Examples are organized by “difficulty” / required physics machinery:
@@ -72,6 +77,7 @@ Root cause:
 - **Lambda handling parity:**
   - `general_option=1`: `lambda = [0, logspace(lambda_min, lambda_max, nlambda-1)]` (matches `regcoil_compute_lambda.f90`)
   - `general_option=5`: ported Brent-style lambda search (matches `regcoil_auto_regularization_solve.f90`)
+  - Note: for strict netCDF parity, the port reproduces the Fortran edge-case `nlambda=2 => lambda(2)=NaN` from `regcoil_compute_lambda.f90`.
 
 ## Validate parity vs original REGCOIL (manual)
 
