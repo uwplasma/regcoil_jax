@@ -21,6 +21,10 @@ Or use the wrapper (runs CLI, and optionally postprocesses)::
   python examples/2_intermediate/run_cli_and_postprocess.py
   python examples/2_intermediate/run_cli_and_postprocess.py --postprocess --no_vtk
 
+Additional CLI inputs in this tier:
+- `examples/2_intermediate/regcoil_in.torus_svd_scan`: REGCOIL `general_option=3` (NESCOIL-style truncated SVD scan).
+- `examples/2_intermediate/regcoil_in.torus_nescout_diagnostics`: REGCOIL `general_option=2` (diagnostics for a NESCOIL `nescout` current potential).
+
 Included scripts:
 - `jax_optimize_coil_minor_radius.py`: optimize `a_coil` for the `Bnormal_from_net_coil_currents` kernel (fastest).
 - `jax_optimize_coil_radius_full_regcoil.py`: optimize `a_coil` while differentiating through matrix assembly + linear solve.

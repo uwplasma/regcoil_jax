@@ -66,6 +66,14 @@ def _copy_example(tmp_dir: Path, input_name: str) -> Path:
         if nescin_src.exists():
             shutil.copy2(nescin_src, tmp_dir / Path(nescin).name)
 
+    # NESCOIL diagnostics mode needs the nescout file next to the input.
+    m = re.search(r"nescout_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
+    if m:
+        nescout = m.group(1)
+        nescout_src = Path(nescout) if os.path.isabs(nescout) else (src.parent / nescout)
+        if nescout_src.exists():
+            shutil.copy2(nescout_src, tmp_dir / Path(nescout).name)
+
     # Surface-table / FOCUS cases need shape_filename_plasma next to the input.
     m = re.search(r"shape_filename_plasma\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
     if m:
@@ -230,6 +238,8 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "1_simple/regcoil_in.compareToMatlab1_option1",
         "1_simple/regcoil_in.plasma_option_6_fourier_table",
         "1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm",
+        "2_intermediate/regcoil_in.torus_svd_scan",
+        "2_intermediate/regcoil_in.torus_nescout_diagnostics",
         "3_advanced/regcoil_in.lambda_search_1",
         "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low",
         "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high",

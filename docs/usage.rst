@@ -29,6 +29,9 @@ commonly-used keys:
   - ``3``: winding surface read from a NESCOIL ``nescin`` file (``nescin_filename``)
   - ``4``: constant-arclength theta coordinate on an offset-from-VMEC winding surface (``separation`` and ``constant_arclength_tolerance``)
 - ``general_option=5``: lambda search (see the ``examples/3_advanced`` inputs)
+- ``general_option=2``: compute diagnostics for one or more NESCOIL current potentials stored in ``nescout_filename``
+  (see ``examples/2_intermediate/regcoil_in.torus_nescout_diagnostics``)
+- ``general_option=3``: emulate NESCOIL’s truncated SVD scan (see ``examples/2_intermediate/regcoil_in.torus_svd_scan``)
 
 Lambda search targets
 ---------------------
@@ -49,6 +52,9 @@ Examples
 --------
 
 See `examples/README.md` for the tiered examples layout (`1_simple/`, `2_intermediate/`, `3_advanced/`).
+
+Note: for strict parity with the reference Fortran code, this port reproduces some edge-case behavior,
+including the ``nlambda=2`` lambda-grid producing ``lambda(2)=NaN`` (as in ``regcoil_compute_lambda.f90``).
 
 Autodiff / Optimization demos
 -----------------------------

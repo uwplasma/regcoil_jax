@@ -45,7 +45,7 @@ def main():
     from .geometry_fourier import FourierSurface
     from .surfaces import plasma_surface_from_inputs, coil_surface_from_inputs
     from .build_matrices_jax import build_matrices
-    from .solve_jax import lambda_grid, solve_for_lambdas, diagnostics, choose_lambda, auto_regularization_solve
+    from .solve_jax import lambda_grid, solve_for_lambdas, diagnostics, choose_lambda, auto_regularization_solve, svd_scan
     from .io_output import write_output_nc
     import time as _time
 
@@ -198,7 +198,35 @@ def main():
     print(f"[regcoil_jax] nbasis={mats['matrix_B'].shape[0]}  Np={plasma['r'].shape[1]*plasma['r'].shape[2]}  Nc={coil['r'].shape[1]*coil['r'].shape[2]}")
 
     general_option = int(inputs.get("general_option", 1))
-    if general_option == 5:
+    if general_option == 2:
+        from .io_nescout import read_nescout_potentials
+
+        nescout = inputs.get("nescout_filename", None)
+        if nescout is None:
+            raise SystemExit("general_option=2 requires nescout_filename")
+        nescout = _resolve_relpath(str(nescout))
+        pots = read_nescout_potentials(
+            str(nescout),
+            mpol_potential=int(inputs.get("mpol_potential", mats.get("mpol_potential", 12))),
+            ntor_potential=int(inputs.get("ntor_potential", mats.get("ntor_potential", 12))),
+            nfp=int(mats.get("nfp", 1)),
+            symmetry_option=int(inputs.get("symmetry_option", 1)),
+        )
+        if len(pots.solutions) == 0:
+            raise SystemExit(f"No Phi(m,n) blocks found in nescout file: {nescout}")
+        # Match regcoil_validate_input.f90: overwrite nlambda with the number of potentials detected.
+        inputs = dict(inputs)
+        inputs["nlambda"] = int(len(pots.solutions))
+        lambdas = lambda_grid(inputs)
+        sols = jnp.asarray(np.stack(pots.solutions, axis=0), dtype=jnp.float64)
+        chi2_B, chi2_K, max_B, max_K = diagnostics(mats, sols)
+        idx = None
+        exit_code = 0
+    elif general_option == 3:
+        lambdas, sols, chi2_B, chi2_K, max_B, max_K = svd_scan(mats)
+        idx = None
+        exit_code = 0
+    elif general_option == 5:
         lambdas, sols, chi2_B, chi2_K, max_B, max_K, idx, exit_code = auto_regularization_solve(inputs, mats)
         # For output parity: if the chosen target option is max_K_lse or lp_norm_K, also store
         # the per-lambda diagnostic arrays with the Fortran variable names.

@@ -4,6 +4,13 @@ import jax.numpy as jnp
 
 _FORTRAN_REAL4_0P01_AS_REAL8 = 0.009999999776482582
 
+def _get_g_matrix(mats):
+    # g is optionally stored depending on save_level; reconstruct it if needed.
+    if "g" in mats:
+        return mats["g"]
+    return mats["g_over_Np"] * mats["normNp"][:, None]
+
+
 def lambda_grid(inputs):
     """REGCOIL lambda list for scan-style runs (general_option=1).
 
@@ -14,13 +21,25 @@ def lambda_grid(inputs):
     nlambda = int(inputs.get("nlambda", 4))
     lam_min = float(inputs.get("lambda_min", 1.0e-19))
     lam_max = float(inputs.get("lambda_max", 1.0e-13))
-    if nlambda <= 1:
-        return jnp.asarray([0.0])
-    if nlambda == 2:
-        return jnp.asarray([0.0, lam_min])
-    # logspace inclusive for the remaining nlambda-1 entries
-    tail = lam_min * jnp.exp(jnp.linspace(0.0, jnp.log(lam_max / lam_min), nlambda - 1))
-    return jnp.concatenate([jnp.asarray([0.0]), tail], axis=0)
+    # Intentionally mirror the Fortran implementation including its edge-case behavior:
+    #
+    #   do j = 1,nlambda-1
+    #      lambda(j+1) = lambda_min * exp((log(lambda_max/lambda_min)*(j-1))/(nlambda-2))
+    #   end do
+    #
+    # For nlambda=2 this produces NaN for lambda(2) due to 0/0. We keep this behavior
+    # for strict netCDF parity with the reference implementation.
+    out = jnp.zeros((nlambda,), dtype=jnp.float64)
+    if nlambda <= 0:
+        return out
+    out = out.at[0].set(0.0)
+    if nlambda == 1:
+        return out
+    j = jnp.arange(1, nlambda, dtype=jnp.float64)  # 1..nlambda-1
+    denom = float(nlambda - 2)
+    expo = (j - 1.0) * jnp.log(lam_max / lam_min) / denom
+    out = out.at[1:].set(lam_min * jnp.exp(expo))
+    return out
 
 
 def solve_one_lambda(mats, lam):
@@ -45,6 +64,55 @@ def solve_for_lambdas(mats, lambdas):
         x = solve_one_lambda(mats, lam)
         sols.append(x)
     return jnp.stack(sols, axis=0)  # (nlambda, nb)
+
+def svd_scan(mats):
+    """Port of regcoil_svd_scan.f90 (general_option=3).
+
+    Returns:
+      lambdas: (nlambda,) all zeros (matches Fortran)
+      sols:    (nlambda, nbasis) truncated-SVD solutions (NESCOIL-style ordering)
+      chi2_B, chi2_K, max_B, max_K: (nlambda,)
+    """
+    g = _get_g_matrix(mats)  # (Np, nb)
+    nb = int(g.shape[1])
+    np_plasma = int(g.shape[0])
+    if nb > np_plasma:
+        raise ValueError("svd_scan requires num_basis_functions <= ntheta_plasma*nzeta_plasma")
+    if nb < 2:
+        raise ValueError("svd_scan requires at least 2 basis functions")
+
+    normNp = mats["normNp"]  # (Np,)
+    w = jnp.sqrt(jnp.where(normNp == 0.0, 1.0, normNp))
+    # RHS is -(Bplasma + Bnet) * sqrt(normN)
+    Btarget = (mats["Bplasma"] + mats["Bnet"]).reshape(-1)
+    rhs = -Btarget * w
+    # A = g / sqrt(normN)
+    A = g / w[:, None]
+
+    # SVD: A = U diag(s) V^T
+    U, s, VT = jnp.linalg.svd(A, full_matrices=False)
+    UTRHS = U.T @ rhs  # (nb,)
+
+    sol = VT[0] * (UTRHS[0] / s[0])
+
+    nlambda = nb - 1
+    sols = []
+    # Fortran loop: do ilambda = nlambda,1,-1; index = nb-ilambda+1 (1-based) => index0 = nb-ilambda (0-based)
+    for ilambda in range(nlambda, 0, -1):
+        index0 = nb - ilambda
+        sol = sol + VT[index0] * (UTRHS[index0] / s[index0])
+        sols.append((ilambda, sol))
+
+    # Put solutions in Fortran's output indexing: sols[ilambda-1] corresponds to that ilambda.
+    sols_arr = [None] * nlambda
+    for ilambda, v in sols:
+        sols_arr[ilambda - 1] = v
+    sols_j = jnp.stack(sols_arr, axis=0)
+
+    lambdas = jnp.zeros((nlambda,), dtype=sols_j.dtype)
+    chi2_B, chi2_K, max_B, max_K = diagnostics(mats, sols_j)
+    return lambdas, sols_j, chi2_B, chi2_K, max_B, max_K
+
 
 def diagnostics(mats, sols):
     """Return chi2_B, chi2_K, max_Bnormal, max_K arrays of shape (nlambda,)."""

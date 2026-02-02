@@ -1,0 +1,39 @@
+! Intermediate example: emulate NESCOIL truncated SVD scan (REGCOIL general_option=3).
+!
+! Run:
+!   regcoil_jax --platform cpu --verbose examples/2_intermediate/regcoil_in.torus_svd_scan
+!
+! Optional figures/VTK (including coil cutting) via the shared postprocess script:
+!   python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/2_intermediate/regcoil_in.torus_svd_scan
+
+&regcoil_nml
+  general_option = 3
+
+  ! NOTE: In the Fortran REGCOIL implementation, arrays are allocated before
+  ! regcoil_svd_scan overwrites nlambda, so we set nlambda consistently here
+  ! to avoid allocation mismatches when generating reference outputs.
+  nlambda = 23
+
+  ntheta_plasma = 36
+  nzeta_plasma  = 36
+  ntheta_coil   = 36
+  nzeta_coil    = 36
+
+  mpol_potential = 3
+  ntor_potential = 3
+
+  geometry_option_plasma = 1
+  R0_plasma = 3.0
+  a_plasma = 1.0
+  nfp_imposed = 1
+
+  geometry_option_coil = 1
+  R0_coil = 3.0
+  a_coil = 1.7
+
+  net_poloidal_current_amperes = 1.4
+  net_toroidal_current_amperes = 0.3
+
+  symmetry_option = 1
+  regularization_term_option = "chi2_K"
+/
