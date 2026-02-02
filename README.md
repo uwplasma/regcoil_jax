@@ -19,6 +19,12 @@ regcoil_jax --platform cpu --verbose examples/2_intermediate/regcoil_in.torus_ne
 pytest -q
 ```
 
+Optional: also smoke-run the slow/high-resolution examples (will take much longer):
+
+```bash
+REGCOIL_JAX_RUN_SLOW=1 pytest -q
+```
+
 Postprocess into figures + ParaView files (coil cutting + field lines):
 
 ```bash

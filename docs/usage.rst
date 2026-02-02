@@ -89,3 +89,7 @@ Tests
 From the project root::
 
   pytest -q
+
+To also run slow/high-resolution examples (not recommended for CI)::
+
+  REGCOIL_JAX_RUN_SLOW=1 pytest -q
