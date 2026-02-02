@@ -50,7 +50,7 @@ def read_surface_fourier_table(path: str | Path) -> FourierTableSurface:
     zmnc = np.zeros((mnmax,), dtype=float)
 
     for i in range(mnmax):
-        parts = lines[start + i].strip().replace("D", "E").split()
+        parts = lines[start + i].strip().replace("D", "E").replace("d", "E").split()
         if len(parts) < 6:
             raise ValueError(f"Malformed coefficient row in {path}: {lines[start+i]!r}")
         xm[i] = int(float(parts[0]))
@@ -61,4 +61,3 @@ def read_surface_fourier_table(path: str | Path) -> FourierTableSurface:
         zmnc[i] = float(parts[5])
 
     return FourierTableSurface(xm=xm, xn=xn, rmnc=rmnc, zmns=zmns, rmns=rmns, zmnc=zmnc)
-

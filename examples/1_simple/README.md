@@ -33,3 +33,5 @@ Suggested starting points:
 - `regcoil_in.compareToMatlab1`: basic parity case.
 - `regcoil_in.axisymmetrySanityTest_chi2K_regularization`: sanity check with `chi2_K` regularization.
 - `regcoil_in.axisymmetrySanityTest_Laplace_Beltrami_regularization`: same geometry but using `Laplace-Beltrami` regularization.
+- `regcoil_in.plasma_option_6_fourier_table`: plasma `geometry_option_plasma=6` (ASCII Fourier table).
+- `regcoil_in.plasma_option_7_focus_embedded_bnorm`: plasma `geometry_option_plasma=7` (FOCUS boundary) with embedded Bn coefficients.

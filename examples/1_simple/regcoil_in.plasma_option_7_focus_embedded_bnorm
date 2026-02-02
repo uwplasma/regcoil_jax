@@ -1,0 +1,33 @@
+! Exercise geometry_option_plasma=7 (FOCUS rdsurf) and embedded Bn coefficients.
+!
+! Run:
+!   regcoil_jax --platform cpu --verbose examples/1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm
+!
+&regcoil_nml
+  nlambda = 4
+  lambda_min = 1e-18
+  lambda_max = 1e-10
+
+  ntheta_plasma = 32
+  nzeta_plasma  = 32
+  ntheta_coil   = 32
+  nzeta_coil    = 32
+  mpol_potential = 8
+  ntor_potential = 8
+
+  geometry_option_plasma = 7
+  shape_filename_plasma = "plasma_focus_torus_with_embedded_bnorm.rdsurf"
+
+  ! Use embedded Bn coefficients from the FOCUS file:
+  load_bnorm = .true.
+
+  geometry_option_coil = 1
+  R0_coil = 3.0
+  a_coil = 1.7
+
+  net_poloidal_current_amperes = 1.4
+  net_toroidal_current_amperes = 0.3
+
+  symmetry_option = 3
+/
+

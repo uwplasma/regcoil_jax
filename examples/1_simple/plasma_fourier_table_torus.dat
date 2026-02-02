@@ -1,0 +1,6 @@
+! Simple Fourier coefficient table (REGCOIL geometry_option_plasma=6)
+2
+! m  n   rmnc          zmns          rmns          zmnc
+0  0   3.0d0          0.0d0         0.0d0         0.0d0
+1  0   1.0d0          1.0d0         0.0d0         0.0d0
+

@@ -57,7 +57,7 @@ def read_focus_surface(path: str | Path) -> FocusSurface:
     zmns = np.zeros((mnmax,), dtype=float)
 
     for i in range(mnmax):
-        p = lines[start + i].strip().replace("D", "E").split()
+        p = lines[start + i].strip().replace("D", "E").replace("d", "E").split()
         if len(p) < 6:
             raise ValueError(f"Malformed FOCUS surface row: {lines[start+i]!r}")
         xn[i] = int(float(p[0])) * nfp  # include nfp (Fortran does this)
@@ -79,7 +79,7 @@ def read_focus_surface(path: str | Path) -> FocusSurface:
         bfc = np.zeros((nbf,), dtype=float)
         bfs = np.zeros((nbf,), dtype=float)
         for i in range(nbf):
-            p = lines[bn_start + i].strip().replace("D", "E").split()
+            p = lines[bn_start + i].strip().replace("D", "E").replace("d", "E").split()
             if len(p) < 4:
                 raise ValueError(f"Malformed FOCUS Bn row: {lines[bn_start+i]!r}")
             bfn[i] = int(float(p[0])) * nfp  # include nfp (Fortran does this)
@@ -102,4 +102,3 @@ def read_focus_surface(path: str | Path) -> FocusSurface:
         bfc=bfc,
         bfs=bfs,
     )
-

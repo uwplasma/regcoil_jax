@@ -50,6 +50,14 @@ Examples
 
 See `examples/README.md` for the tiered examples layout (`1_simple/`, `2_intermediate/`, `3_advanced/`).
 
+Geometry-option examples
+------------------------
+
+The `examples/1_simple/` tier includes small inputs that exercise the non-VMEC plasma geometry options:
+
+- ``regcoil_in.plasma_option_6_fourier_table`` (``geometry_option_plasma=6``)
+- ``regcoil_in.plasma_option_7_focus_embedded_bnorm`` (``geometry_option_plasma=7`` with embedded Bn coefficients)
+
 Outputs
 -------
 

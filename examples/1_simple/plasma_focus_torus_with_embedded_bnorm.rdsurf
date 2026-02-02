@@ -1,0 +1,9 @@
+! Minimal FOCUS rdsurf-like file (REGCOIL geometry_option_plasma=7)
+2  1  1
+! header line (ignored)
+! header line (ignored)
+0  0   3.0d0          0.0d0         0.0d0         0.0d0
+0  1   1.0d0          0.0d0         0.0d0         1.0d0
+
+! header line (ignored)
+0  1   0.0d0         1.0d-4

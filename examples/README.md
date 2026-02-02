@@ -14,6 +14,15 @@ regcoil_jax --platform cpu --verbose path/to/regcoil_in.some_case
 
 The CLI writes `regcoil_out.some_case.nc` and `regcoil_out.some_case.log` next to the input file.
 
+Tier wrappers (Python)
+----------------------
+
+Each tier includes a small wrapper that runs the CLI and can optionally postprocess:
+
+- `examples/1_simple/run_cli_and_postprocess.py`
+- `examples/2_intermediate/run_cli_and_postprocess.py`
+- `examples/3_advanced/run_cli_and_postprocess.py`
+
 Figures + ParaView VTK (optional)
 --------------------------------
 

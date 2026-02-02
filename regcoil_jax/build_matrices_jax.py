@@ -211,6 +211,12 @@ def build_matrices(inputs, plasma, coil):
     area_plasma = nfp * dth_p * dze_p * jnp.sum(plasma["normN"])
     area_coil = nfp * dth_c * dze_c * jnp.sum(coil["normN"])
 
+    # Volumes (for output parity; Fortran uses an R^2 dZ formula).
+    # Use divergence theorem: V = (1/3) ∫ r · n dS = (1/3) ∫ r · (n_unit |N|) dθ dζ
+    # Take abs() to guard against normal orientation conventions.
+    vol_plasma = jnp.abs((nfp * dth_p * dze_p / 3.0) * jnp.sum(jnp.sum(plasma["r"] * plasma["nunit"], axis=0) * plasma["normN"]))
+    vol_coil = jnp.abs((nfp * dth_c * dze_c / 3.0) * jnp.sum(jnp.sum(coil["r"] * coil["nunit"], axis=0) * coil["normN"]))
+
     out = dict(
         nfp=nfp,
         # Metadata scalars (match regcoil_write_output.f90 naming where possible)
@@ -239,9 +245,11 @@ def build_matrices(inputs, plasma, coil):
         normN_coil=coil["normN"],
         area_plasma=area_plasma,
         area_coil=area_coil,
+        volume_plasma=vol_plasma,
+        volume_coil=vol_coil,
         xm=xm, xn=xn,
         basis=basis,
-        g=g, g_over_Np=g_over_Np,
+        g_over_Np=g_over_Np,
         fx=fx, fy=fy, fz=fz,
         flb=flb,
         dx=dx, dy=dy, dz=dz,

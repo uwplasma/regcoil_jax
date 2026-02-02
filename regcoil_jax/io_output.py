@@ -168,6 +168,8 @@ def write_output_nc(
     _maybe_write_scalar("curpol", float(inputs["curpol"]) if "curpol" in inputs else None)
     _maybe_write_scalar("area_plasma", float(np.asarray(mats["area_plasma"])) if "area_plasma" in mats else None)
     _maybe_write_scalar("area_coil", float(np.asarray(mats["area_coil"])) if "area_coil" in mats else None)
+    _maybe_write_scalar("volume_plasma", float(np.asarray(mats["volume_plasma"])) if "volume_plasma" in mats else None)
+    _maybe_write_scalar("volume_coil", float(np.asarray(mats["volume_coil"])) if "volume_coil" in mats else None)
 
     # Grids
     if ntheta_plasma is not None:
@@ -218,6 +220,32 @@ def write_output_nc(
 
         _maybe_write_1d("RHS_B", mats.get("RHS_B", None), "num_basis_functions")
         _maybe_write_1d("RHS_regularization", mats.get("RHS_regularization", mats.get("RHS_reg", None)), "num_basis_functions")
+
+        # Optional heavy matrices (match REGCOIL save_level behavior):
+        # - inductance: (ntheta_nzeta_plasma, ntheta_nzeta_coil) (only if save_level<1 in Fortran)
+        # - g:          (ntheta_nzeta_plasma, num_basis_functions) (only if save_level<2 in Fortran)
+        save_level = int(mats.get("save_level", 3))
+        if save_level < 1 and ("inductance" in mats) and (ntheta_coil is not None) and (nzeta_coil is not None):
+            try:
+                ind = np.asarray(mats["inductance"], dtype=float)  # (Np,Nc) in regcoil_jax flattening
+                T = int(ntheta_plasma); Z = int(nzeta_plasma)
+                Tc = int(ntheta_coil); Zc = int(nzeta_coil)
+                # Reorder both plasma rows and coil columns to match Fortran's (izeta,itheta) indexing.
+                ind_zt = ind.reshape(T, Z, Tc * Zc).transpose(1, 0, 2).reshape(T * Z, Tc, Zc).transpose(0, 2, 1).reshape(T * Z, Tc * Zc)
+                ds.createVariable("inductance", "f8", ("ntheta_nzeta_plasma", "ntheta_nzeta_coil"))[:] = ind_zt
+            except Exception:
+                pass
+
+        if save_level < 2 and ("g" in mats):
+            try:
+                g = np.asarray(mats["g"], dtype=float)  # (Np,nb) in regcoil_jax flattening
+                T = int(ntheta_plasma); Z = int(nzeta_plasma)
+                nb2 = int(g.shape[1])
+                if nb2 == nb:
+                    g_zt = g.reshape(T, Z, nb).transpose(1, 0, 2).reshape(T * Z, nb)
+                    ds.createVariable("g", "f8", ("ntheta_nzeta_plasma", "num_basis_functions"))[:] = g_zt
+            except Exception:
+                pass
 
         # Plasma surface geometry on all nfp field periods.
         try:

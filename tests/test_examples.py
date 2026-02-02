@@ -67,6 +67,14 @@ def _copy_example(tmp_dir: Path, input_name: str) -> Path:
         if nescin_src.exists():
             shutil.copy2(nescin_src, tmp_dir / Path(nescin).name)
 
+    # Surface-table / FOCUS cases need shape_filename_plasma next to the input.
+    m = re.search(r"shape_filename_plasma\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
+    if m:
+        shape = m.group(1)
+        shape_src = Path(shape) if os.path.isabs(shape) else (src.parent / shape)
+        if shape_src.exists():
+            shutil.copy2(shape_src, tmp_dir / Path(shape).name)
+
     return dst
 
 
@@ -162,6 +170,8 @@ def test_examples_match_baselines(tmp_path: Path):
         ("axisymmetrySanityTest_Laplace_Beltrami_regularization", "1_simple/regcoil_in.axisymmetrySanityTest_Laplace_Beltrami_regularization"),
         ("compareToMatlab1", "1_simple/regcoil_in.compareToMatlab1"),
         ("compareToMatlab1_option1", "1_simple/regcoil_in.compareToMatlab1_option1"),
+        ("plasma_option_6_fourier_table", "1_simple/regcoil_in.plasma_option_6_fourier_table"),
+        ("plasma_option_7_focus_embedded_bnorm", "1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm"),
         ("lambda_search_1", "3_advanced/regcoil_in.lambda_search_1"),
         ("lambda_search_2_current_density_target_too_low", "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low"),
         ("lambda_search_3_current_density_target_too_high", "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high"),
