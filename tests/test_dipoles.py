@@ -76,3 +76,15 @@ def test_optimize_dipole_moments_recovers_target_bnormal():
     # The objective is convex in m for fixed positions, so we should recover the targets closely.
     assert np.sqrt(np.mean((pred - target) ** 2)) < 5e-7
 
+
+def test_dipole_bfield_batching_matches_unbatched():
+    jax.config.update("jax_enable_x64", True)
+    rng = np.random.default_rng(0)
+
+    points = rng.normal(size=(17, 3))
+    positions = rng.normal(size=(25, 3))
+    moments = rng.normal(size=(25, 3))
+
+    B_full = np.asarray(dipole_bfield(points=points, positions=positions, moments=moments, eps=0.0, batch=25), dtype=float)
+    B_batched = np.asarray(dipole_bfield(points=points, positions=positions, moments=moments, eps=0.0, batch=8), dtype=float)
+    assert np.allclose(B_full, B_batched, rtol=1e-12, atol=1e-14)

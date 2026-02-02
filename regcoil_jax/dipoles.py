@@ -73,6 +73,13 @@ def dipole_bfield(
         raise ValueError("batch must be positive")
     batch = min(batch, M)
     n_batches = (M + batch - 1) // batch
+    # Pad to a multiple of `batch` so dynamic slicing never goes out-of-bounds.
+    Mp = int(n_batches * batch)
+    if Mp != M:
+        pad = Mp - M
+        pos = jnp.pad(pos, ((0, pad), (0, 0)))
+        mom = jnp.pad(mom, ((0, pad), (0, 0)))
+        M = Mp
 
     coeff = mu0 / (4.0 * pi)
     eps2 = float(eps) * float(eps)
@@ -82,10 +89,8 @@ def dipole_bfield(
 
         def body(i, a):
             lo = i * batch
-            hi = jnp.minimum(lo + batch, M)
             p = jax.lax.dynamic_slice(pos, (lo, 0), (batch, 3))
             m = jax.lax.dynamic_slice(mom, (lo, 0), (batch, 3))
-            mask = (jnp.arange(batch) + lo) < hi
 
             r = xi[None, :] - p  # (B,3)
             r2 = jnp.sum(r * r, axis=-1) + eps2
@@ -94,7 +99,7 @@ def dipole_bfield(
             inv_r5 = inv_r3 / r2
             mdotr = jnp.sum(m * r, axis=-1)
             term = (3.0 * r * (mdotr * inv_r5)[:, None]) - (m * inv_r3[:, None])
-            contrib = jnp.sum(term * mask[:, None], axis=0)
+            contrib = jnp.sum(term, axis=0)
             return a + (coeff * contrib)
 
         return jax.lax.fori_loop(0, n_batches, body, acc)
@@ -145,4 +150,3 @@ def dipole_array_from_surface_offset(
     # Start with zero moments; optimization scripts fill these.
     mom = np.zeros_like(pos)
     return pos, mom
-
