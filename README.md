@@ -99,6 +99,12 @@ Hybrid (few loops + many dipoles) B·n optimization + Poincaré:
 python examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py
 ```
 
+JAX-native fieldline tracing + soft Poincaré gradients (demo):
+
+```bash
+python examples/3_advanced/jax_poincare_grad_demo.py
+```
+
 Quadcoil-style ∇Φ diagnostics (coil spacing / total coil length estimates) + optional coil cutting:
 
 ```bash

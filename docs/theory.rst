@@ -298,6 +298,33 @@ Dipole sources (hybrid demos)
 
 For “beyond REGCOIL” demos, we also include **point dipoles** as a differentiable proxy for small local coils
 or permanent magnets. The dipole field formula and hybrid optimization objective are documented in
+
+Field line tracing and soft Poincaré sections (JAX)
+---------------------------------------------------
+
+For some optimization workflows, we trace *coil-only* field lines and define objectives based on their behavior.
+The field line ODE (in arclength-like parameter :math:`s`) is:
+
+.. math::
+
+   \\frac{d\\mathbf{x}}{ds} = \\pm\\frac{\\mathbf{B}(\\mathbf{x})}{\\lVert\\mathbf{B}(\\mathbf{x})\\rVert}.
+
+In this repository:
+
+- the Biot–Savart field :math:`\\mathbf{B}` for filament segments is implemented in JAX in ``regcoil_jax/biot_savart_jax.py``,
+- fixed-step RK4 field line integration is implemented in JAX in ``regcoil_jax/fieldlines_jax.py``.
+
+Exact Poincaré section extraction finds crossings of :math:`\\phi=\\phi_0\\; (\\mathrm{mod}\\;2\\pi/N_{fp})`, which is discrete.
+For differentiable optimization, we instead use a *soft section weight* for each sampled point:
+
+.. math::
+
+   w = \\exp\\left(-\\left(\\frac{\\sin(N_{fp}(\\phi-\\phi_0))}{\\sigma}\\right)^2\\right),
+
+and build differentiable statistics (e.g. weighted means in :math:`(R,Z)`).
+
+This is a smooth surrogate of a classic Poincaré plot and is intended for autodiff-based objectives, not as a
+drop-in replacement for plotting-quality crossing points.
 ``docs/hybrid_design.rst`` and implemented in:
 
 - ``regcoil_jax/dipoles.py``

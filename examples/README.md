@@ -106,6 +106,12 @@ original Fortran REGCOIL distribution:
   python examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py
   ```
 
+- JAX-native fieldline tracing + soft Poincaré gradients (toy demo):
+
+  ```bash
+  python examples/3_advanced/jax_poincare_grad_demo.py
+  ```
+
 You can independently disable figures or VTK outputs:
 
 ```bash

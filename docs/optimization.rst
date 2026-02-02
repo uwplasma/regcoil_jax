@@ -147,3 +147,18 @@ The postprocessing pipeline supports ParaView outputs for:
 - Poincaré section points (`poincare_points.vtp`)
 
 Enable Poincaré output in the shared postprocess script with ``--poincare``.
+
+JAX-native Poincaré (soft) for optimization
+-------------------------------------------
+
+The classic Poincaré plot pipeline is discrete: it detects crossings of a field line with a plane and interpolates
+to find the crossing point. This is not differentiable.
+
+For autodiff-based objectives, ``regcoil_jax`` includes a smooth alternative:
+
+- trace field lines in JAX: ``regcoil_jax.fieldlines_jax.trace_fieldlines_rk4``
+- assign smooth weights to points near a section plane: ``poincare_section_weights``
+- compute differentiable soft section statistics: ``poincare_weighted_RZ``
+
+The demo ``examples/3_advanced/jax_poincare_grad_demo.py`` computes a toy differentiable objective and prints
+the gradient norm with respect to per-coil currents.

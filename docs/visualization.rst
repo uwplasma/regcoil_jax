@@ -85,6 +85,29 @@ Field line tracing
 The field line example uses a simple Biot–Savart midpoint rule on straight segments (coil filaments only),
 implemented in ``regcoil_jax/fieldlines.py``. This is intended for visualization and sanity checks.
 
+The shared postprocess script supports tracing in JAX with ``--jax_fieldlines``.
+
+JAX-native field lines (for autodiff)
+-------------------------------------
+
+For optimization workflows, it can be useful to keep the *field line integration* in JAX so it can be used inside
+autodiff-based objectives. This repo includes a JAX RK4 tracer:
+
+- ``regcoil_jax/fieldlines_jax.py`` (``trace_fieldlines_rk4``)
+
+and a differentiable *soft Poincaré* helper:
+
+- ``poincare_section_weights`` and ``poincare_weighted_RZ``
+
+Exact Poincaré crossing extraction (detecting discrete crossings) remains a visualization-first tool
+in ``regcoil_jax/fieldlines.py``.
+
+Example demo (prints gradient norms):
+
+::
+
+  python examples/3_advanced/jax_poincare_grad_demo.py
+
 Poincaré sections
 -----------------
 

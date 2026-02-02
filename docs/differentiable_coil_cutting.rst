@@ -11,6 +11,18 @@ current potential :math:`\Phi(\theta,\zeta)`:
 This contouring step is geometric and contains **discrete choices** (topology changes, branch selection,
 case distinctions in marching-squares logic). As a result, it is **not differentiable** in the usual sense.
 
+Can contour cutting be “fully topology-robust and differentiable”?
+------------------------------------------------------------------
+
+Not in the strict mathematical sense across all inputs:
+
+- The mapping :math:`\\Phi \\mapsto \\{(\\theta,\\zeta): \\Phi(\\theta,\\zeta)=\\Phi_0\\}` is *set-valued*.
+- Topology changes (splits/merges) occur at critical points where :math:`\\nabla\\Phi=0` and are inherently discrete.
+- Any algorithm that returns a *specific* discrete coil set must make branch/topology decisions, which are not smooth.
+
+What *is* possible (and useful in practice) is to choose a differentiable surrogate that **fixes topology by construction**
+or uses smooth “soft” assignments, as provided in this repository (soft-contour and topology-fixed multi-coil relaxations).
+
 Nevertheless, a JAX port can still leverage autodiff in two ways:
 
 1. avoid differentiating through coil cutting (recommended for robust workflows), and

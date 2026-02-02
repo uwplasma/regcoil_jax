@@ -14,6 +14,8 @@ It:
 Notes:
 - Field lines traced here are for the *coil filament* approximation (coil-only field).
 - For VMEC-based examples, this is usually sufficient for qualitative visualization.
+- Use `--jax_fieldlines` to run the integrator in JAX (static-shape, autodiff-friendly); crossing-based Poincaré
+  point extraction remains a visualization-first step.
 """
 
 from __future__ import annotations
@@ -111,6 +113,11 @@ def main():
     parser.add_argument("--no_vtk", action="store_true", help="Skip writing ParaView VTK files.")
     parser.add_argument("--no_coils", action="store_true", help="Skip coil cutting (and thus coils.* output).")
     parser.add_argument("--no_fieldlines", action="store_true", help="Skip coil-only field line tracing.")
+    parser.add_argument(
+        "--jax_fieldlines",
+        action="store_true",
+        help="Trace field lines in JAX (static-shape, autodiff-friendly). Poincaré points are still extracted discretely for visualization.",
+    )
     args = parser.parse_args()
 
     if netCDF4 is None:  # pragma: no cover
@@ -379,13 +386,35 @@ def main():
             starts.append(x + float(args.fieldline_offset) * nhat)
         starts = np.asarray(starts, dtype=float)
 
-        flines = trace_fieldlines(
-            field,
-            starts=starts,
-            ds=float(args.fieldline_ds),
-            n_steps=int(args.fieldline_steps),
-            stop_radius=10.0,
-        )
+        if args.jax_fieldlines:
+            import jax
+            import jax.numpy as jnp
+
+            from regcoil_jax.biot_savart_jax import segments_from_filaments
+            from regcoil_jax.fieldlines_jax import trace_fieldlines_rk4
+
+            jax.config.update("jax_enable_x64", True)
+            segs = segments_from_filaments(filaments_xyz=coils.filaments_xyz)
+            starts_j = jnp.asarray(starts, dtype=jnp.float64)
+            I_j = jnp.asarray(coils.coil_currents, dtype=jnp.float64)
+            traced = trace_fieldlines_rk4(
+                segs,
+                starts=starts_j,
+                filament_currents=I_j,
+                ds=float(args.fieldline_ds),
+                n_steps=int(args.fieldline_steps),
+                stop_radius=10.0,
+                seg_batch=2048,
+            )
+            flines = [np.asarray(line, dtype=float) for line in np.asarray(traced.points)]
+        else:
+            flines = trace_fieldlines(
+                field,
+                starts=starts,
+                ds=float(args.fieldline_ds),
+                n_steps=int(args.fieldline_steps),
+                stop_radius=10.0,
+            )
 
         pts_all = []
         lines = []

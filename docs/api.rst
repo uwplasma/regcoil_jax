@@ -51,6 +51,9 @@ Coils and postprocessing
 .. automodule:: regcoil_jax.fieldlines
    :members:
 
+.. automodule:: regcoil_jax.fieldlines_jax
+   :members:
+
 .. automodule:: regcoil_jax.vtk_io
    :members:
 
@@ -83,4 +86,3 @@ Optimization and autodiff workflows
 
 .. automodule:: regcoil_jax.diff_coil_cutting
    :members:
-
