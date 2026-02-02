@@ -85,6 +85,12 @@ Optimize per-coil currents after cutting (autodiff through Biot–Savart):
 python examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py
 ```
 
+Hybrid (few loops + many dipoles) B·n optimization + Poincaré:
+
+```bash
+python examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py
+```
+
 ## Tests / Parity
 
 Run the main test suite:

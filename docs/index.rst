@@ -15,4 +15,5 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
    porting_notes
    feature_matrix
    optimization
+   hybrid_design
    visualization

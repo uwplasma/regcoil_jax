@@ -98,3 +98,14 @@ The postprocessing script can also extract a Poincaré section at a fixed toroid
 For a one-command wrapper that enables Poincaré output by default::
 
   python examples/3_advanced/full_solve_cut_coils_and_poincare.py
+
+Advanced Poincaré demos
+-----------------------
+
+Two additional scripts generate Poincaré plots **overlaid with the target surface slice**:
+
+- ``examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py``:
+  compares a baseline winding surface vs an autodiff-optimized winding surface, including coil cutting and per-coil
+  current optimization.
+- ``examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py``:
+  optimizes a hybrid field from a few loops plus many dipoles and overlays the Poincaré section with the target surface.

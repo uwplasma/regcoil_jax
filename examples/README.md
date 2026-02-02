@@ -52,6 +52,26 @@ For a one-command “full workflow” wrapper (solve → cut coils → field lin
 python examples/3_advanced/full_solve_cut_coils_and_poincare.py
 ```
 
+New “beyond REGCOIL” demos
+--------------------------
+
+These scripts showcase workflows that are practical in a JAX rewrite (autodiff + optimization), beyond the
+original Fortran REGCOIL distribution:
+
+- Compare coils **with and without** autodiff winding-surface optimization, then cut coils, optimize per-coil currents,
+  and generate Poincaré plots overlaid with the target surface:
+
+  ```bash
+  python examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py
+  ```
+
+- Optimize a **hybrid source set**: a few simple filament loops + many point dipoles (proxy for windowpane coils / magnets),
+  then generate ParaView outputs and Poincaré plots:
+
+  ```bash
+  python examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py
+  ```
+
 You can independently disable figures or VTK outputs:
 
 ```bash

@@ -78,6 +78,23 @@ The implementation lives in:
 - ``regcoil_jax/coil_current_optimization.py`` (autodiff objective + Adam)
 - ``regcoil_jax/optimize.py`` (small Adam implementation; avoids extra deps)
 
+Hybrid optimizations (filaments + dipoles)
+------------------------------------------
+
+The following “beyond REGCOIL” demo introduces **point dipoles** as a differentiable proxy for
+small local coils / windowpane coils / permanent magnets:
+
+``examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py``
+
+It optimizes:
+
+- a small set of filament-loop currents, and
+- many dipole moments,
+
+to minimize :math:`B\\cdot n` on a target surface, then generates ParaView outputs and Poincaré plots.
+
+See also ``docs/hybrid_design.rst`` for the dipole equations and objective definition.
+
 Poincaré plots and 3D visualization
 -----------------------------------
 

@@ -118,3 +118,9 @@ Outputs and tests
 - NetCDF writer targets **schema parity** with the Fortran output for the covered modes.
 - Tests in ``tests/test_examples.py`` run curated inputs and compare the full netCDF contents against committed
   Fortran reference outputs.
+
+Beyond-REGCOIL demos
+--------------------
+
+- Coil cutting + per-coil current optimization (autodiff through Biot–Savart) is implemented and demonstrated.
+- Hybrid “few loops + many dipoles” optimization is provided as a pedagogic example (not part of Fortran parity goals).

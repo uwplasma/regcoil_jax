@@ -218,6 +218,51 @@ Code mapping:
 Laplace–Beltrami regularization
 -------------------------------
 
+Autodiff postprocessing: coil currents after cutting
+----------------------------------------------------
+
+REGCOIL’s output current potential :math:`\Phi(\theta,\zeta)` represents a continuous surface current distribution
+on the winding surface. A common postprocessing step is to **cut filamentary coils** by taking contours of
+:math:`\Phi(\theta,\zeta)`. This contouring operation is not differentiable, so ``regcoil_jax`` treats it as a
+geometric postprocess.
+
+However, *after* coil cutting, many important tuning problems are smooth and can be optimized with autodiff,
+notably **per-coil currents**.
+
+Let :math:`\{\mathcal{C}_k\}` be a set of cut filament loops, each with current :math:`I_k`. Define the Biot–Savart field
+
+.. math::
+
+   \mathbf{B}(\mathbf{x}) = \sum_k I_k \, \mathbf{B}_k(\mathbf{x}),
+
+and evaluate the normal component on target surface points :math:`\mathbf{x}_i` with unit normals :math:`\hat{\mathbf{n}}_i`:
+
+.. math::
+
+   b_i(\mathbf{I}) = \mathbf{B}(\mathbf{x}_i)\cdot \hat{\mathbf{n}}_i.
+
+The demo optimizes a mean-square loss
+
+.. math::
+
+   \mathcal{L}(\mathbf{I}) = \frac{1}{N}\sum_i (b_i(\mathbf{I}) - b_i^\text{target})^2 + \alpha \|\mathbf{I}-\mathbf{I}_0\|_2^2.
+
+Code mapping:
+
+- coil cutting: ``regcoil_jax/coil_cutting.py``
+- filament Biot–Savart: ``regcoil_jax/biot_savart_jax.py`` (JAX) and ``regcoil_jax/fieldlines.py`` (numpy visualization)
+- per-coil current optimization: ``regcoil_jax/coil_current_optimization.py``
+
+Dipole sources (hybrid demos)
+-----------------------------
+
+For “beyond REGCOIL” demos, we also include **point dipoles** as a differentiable proxy for small local coils
+or permanent magnets. The dipole field formula and hybrid optimization objective are documented in
+``docs/hybrid_design.rst`` and implemented in:
+
+- ``regcoil_jax/dipoles.py``
+- ``regcoil_jax/dipole_optimization.py``
+
 REGCOIL also supports a Laplace–Beltrami regularization of the current potential on the winding surface.
 In the Fortran code this is enabled by setting ``regularization_term_option = "Laplace-Beltrami"``.
 
