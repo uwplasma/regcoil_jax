@@ -1,21 +1,27 @@
-.DS_Store
 __pycache__/
-*.pyc
 .pytest_cache/
-.mypy_cache/
 .ruff_cache/
+.mypy_cache/
+.DS_Store
+*.pyc
 
+# Packaging
 *.egg-info/
 dist/
 build/
+
+# JAX / runtime outputs (examples only; tests/fortran_outputs are tracked)
+examples/**/regcoil_out.*.nc
+examples/**/regcoil_out.*.log
+examples/**/outputs_*/
+examples/**/figures_*/
+examples/**/__pycache__/
+
+# Built docs
 docs/_build/
 
-# REGCOIL outputs
-examples/**/regcoil_out*.nc
-examples/**/regcoil_out*.log
-
-# Example postprocessing artifacts
-examples/**/figures_*/
-examples/**/vtk_*/
-examples/**/coils.*
-examples/**/outputs_*/
+# VTK / ParaView artifacts
+*.vtk
+*.vtu
+*.vts
+*.vtp

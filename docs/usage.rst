@@ -11,7 +11,7 @@ Key inputs
 The Fortran REGCOIL namelist has many options; this parity-first port currently supports a subset. A few
 commonly-used keys:
 
-- ``regularization_term_option``: ``"chi2_K"`` (default), ``"K_xy"``, or ``"Laplace-Beltrami"``
+- ``regularization_term_option``: ``"chi2_K"`` (default), ``"K_xy"``, ``"K_zeta"``, or ``"Laplace-Beltrami"``
 - ``geometry_option_plasma``:
 
   - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
@@ -76,6 +76,7 @@ The `examples/1_simple/` tier includes small inputs that exercise the non-VMEC p
 
 - ``regcoil_in.plasma_option_6_fourier_table`` (``geometry_option_plasma=6``)
 - ``regcoil_in.plasma_option_7_focus_embedded_bnorm`` (``geometry_option_plasma=7`` with embedded Bn coefficients)
+- ``regcoil_in.torus_K_zeta_regularization`` (analytic torus; ``regularization_term_option="K_zeta"``)
 
 The `examples/2_intermediate/` tier includes:
 

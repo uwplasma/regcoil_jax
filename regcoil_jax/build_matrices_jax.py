@@ -18,8 +18,8 @@ def build_matrices(inputs, plasma, coil):
     """Build REGCOIL matrices in JAX (subset).
 
     Currently supports:
-      - regularization_term_option in {chi2_K, K_xy, Laplace-Beltrami}
-      - geometry_option_plasma in {0,1,2,3,6,7} (see surfaces.py)
+      - regularization_term_option in {chi2_K, K_xy, K_zeta, Laplace-Beltrami}
+      - geometry_option_plasma in {0,1,2,3,4,5,6,7} (see surfaces.py)
       - geometry_option_coil in {0,1,2,3,4} (see surfaces.py)
       - load_bnorm (bnorm file) for Bnormal_from_plasma_current
     """
@@ -202,6 +202,34 @@ def build_matrices(inputs, plasma, coil):
     elif reg_opt in ("k_xy", "k-xy"):
         matrix_reg = (dth_c * dze_c) * (fx.T @ fx_over_Nc + fy.T @ fy_over_Nc)
         RHS_reg = (dth_c * dze_c) * (dx @ fx_over_Nc + dy @ fy_over_Nc)
+    elif reg_opt in ("k_zeta", "k-zeta", "kzeta"):
+        # Regularize only the *toroidal* (zeta) component of the surface current density K.
+        #
+        # Let t_zeta = dr/dzeta be the physical tangent vector along the zeta coordinate on the coil surface,
+        # and t̂_zeta = t_zeta / |t_zeta|.
+        #
+        # REGCOIL's "KDifference" vectors satisfy:
+        #   K(θ,ζ) = (d(θ,ζ) - f(θ,ζ)·Φ) / |N(θ,ζ)|
+        # where N = r_zeta × r_theta is the (non-unit) normal vector.
+        #
+        # The zeta-component regularization is then:
+        #   χ²_{Kζ} = ∫ (K · t̂_zeta)^2 dA
+        #          = ∫ ( (d·t̂_zeta - (f·Φ)·t̂_zeta)^2 / |N| ) dθ dζ
+        #
+        # So we form a scalar basis matrix f_zeta = f · t̂_zeta and a scalar d_zeta = d · t̂_zeta,
+        # and reuse the same 1/|N| weighting used throughout the Fortran implementation.
+        t_zeta = _flatten_TZ_to_N3(coil["rze"])  # (Nc,3)
+        t_norm = jnp.linalg.norm(t_zeta, axis=1)
+        t_norm = jnp.where(t_norm == 0.0, 1.0, t_norm)
+        t_hat = t_zeta / t_norm[:, None]
+        tx = t_hat[:, 0]
+        ty = t_hat[:, 1]
+        tz = t_hat[:, 2]
+        f_zeta = fx * tx[:, None] + fy * ty[:, None] + fz * tz[:, None]  # (Nc,nb)
+        f_zeta_over_Nc = f_zeta / normNc[:, None]
+        d_zeta = dx * tx + dy * ty + dz * tz  # (Nc,)
+        matrix_reg = (dth_c * dze_c) * (f_zeta.T @ f_zeta_over_Nc)
+        RHS_reg = (dth_c * dze_c) * (d_zeta @ f_zeta_over_Nc)
     elif reg_opt in ("laplace-beltrami", "laplace_beltrami", "laplace beltrami"):
         matrix_reg = (dth_c * dze_c) * (flb.T @ flb_over_Nc)
         RHS_reg = (dth_c * dze_c) * (d_LB @ flb_over_Nc)

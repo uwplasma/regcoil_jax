@@ -35,6 +35,6 @@ If you have the Fortran executable available locally (typically ``../regcoil/reg
 
 .. code-block:: bash
 
-   python tools/generate_fortran_reference_outputs.py
+   python scripts/generate_fortran_reference_outputs.py
 
-See ``PORTING_NOTES.md`` for additional notes and troubleshooting.
+See ``docs/porting_notes.rst`` for additional notes and troubleshooting.

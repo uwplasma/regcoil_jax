@@ -1,0 +1,32 @@
+! Minimal torus case to exercise regularization_term_option="K_zeta".
+!
+! K_zeta regularizes only the component of the winding-surface current density K
+! along the zeta (toroidal) tangent direction on the winding surface.
+
+&regcoil_nml
+  general_option = 1
+  regularization_term_option = "K_zeta"
+
+  ntheta_plasma = 32
+  nzeta_plasma  = 16
+  ntheta_coil   = 32
+  nzeta_coil    = 16
+
+  nfp_imposed = 2
+
+  mpol_potential = 10
+  ntor_potential = 6
+
+  geometry_option_plasma = 1
+  r0_plasma = 10.0
+  a_plasma  = 0.5
+
+  geometry_option_coil = 1
+  r0_coil = 10.0
+  a_coil  = 1.0
+
+  nlambda = 3
+  lambda_min = 1.0d-14
+  lambda_max = 1.0d-14
+/
+

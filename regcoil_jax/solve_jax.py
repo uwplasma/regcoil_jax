@@ -1,5 +1,6 @@
 from __future__ import annotations
 import math
+import jax
 import jax.numpy as jnp
 
 _FORTRAN_REAL4_0P01_AS_REAL8 = 0.009999999776482582
@@ -42,9 +43,7 @@ def lambda_grid(inputs):
     return out
 
 
-def solve_one_lambda(mats, lam):
-    MB = mats["matrix_B"]; MR = mats["matrix_reg"]
-    RB = mats["RHS_B"];    RR = mats["RHS_reg"]
+def _solve_one_lambda(MB, MR, RB, RR, lam):
     # Match regcoil_solve.f90 scaling:
     #   A = (1/(1+λ)) * MB + (λ/(1+λ)) * MR
     #   b = (1/(1+λ)) * RB + (λ/(1+λ)) * RR
@@ -55,15 +54,25 @@ def solve_one_lambda(mats, lam):
     b = wB * RB + wR * RR
     return jnp.linalg.solve(A, b)
 
+@jax.jit
+def _solve_for_lambdas(MB, MR, RB, RR, lambdas):
+    return jax.vmap(lambda lam: _solve_one_lambda(MB, MR, RB, RR, lam))(lambdas)
+
+def solve_one_lambda(mats, lam):
+    return _solve_one_lambda(mats["matrix_B"], mats["matrix_reg"], mats["RHS_B"], mats["RHS_reg"], lam)
+
 def solve_for_lambdas(mats, lambdas):
-    MB = mats["matrix_B"]; MR = mats["matrix_reg"]
-    RB = mats["RHS_B"];    RR = mats["RHS_reg"]
-    nb = MB.shape[0]
-    sols = []
-    for lam in list(lambdas):
-        x = solve_one_lambda(mats, lam)
-        sols.append(x)
-    return jnp.stack(sols, axis=0)  # (nlambda, nb)
+    """Solve for a batch of lambdas without Python loops.
+
+    This is performance-critical for lambda scans (general_option=1) and for
+    the evaluation phase inside lambda-search options.
+    """
+    MB = mats["matrix_B"]
+    MR = mats["matrix_reg"]
+    RB = mats["RHS_B"]
+    RR = mats["RHS_reg"]
+    lambdas = jnp.asarray(lambdas, dtype=jnp.float64)
+    return _solve_for_lambdas(MB, MR, RB, RR, lambdas)
 
 def svd_scan(mats):
     """Port of regcoil_svd_scan.f90 (general_option=3).

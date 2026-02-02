@@ -1,8 +1,10 @@
-Theory (implemented subset)
-===========================
+Theory
+======
 
-This page summarizes the main equations used by the current parity-first implementation.
-The goal is to match the Fortran REGCOIL implementation and the notation in the REGCOIL paper/manual.
+This page documents the core equations used by ``regcoil_jax`` and maps each equation
+to the corresponding code symbols.
+
+Notation follows the REGCOIL paper/manual where possible.
 
 Surface parameterization
 ------------------------
@@ -43,6 +45,12 @@ and the (non-unit) normal vector using the REGCOIL convention
    \|\mathbf{N}\| = \sqrt{\mathbf{N}\cdot\mathbf{N}},\qquad
    \hat{\mathbf{n}} = \frac{\mathbf{N}}{\|\mathbf{N}\|}
 
+Code mapping
+~~~~~~~~~~~
+
+- Fourier surfaces and analytic derivatives: ``regcoil_jax/geometry_fourier.py`` (``FourierSurface``, ``eval_surface_xyz_and_derivs2``)
+- Metric tensors and normals: ``regcoil_jax/surface_metrics.py`` (``metrics_and_normals``)
+
 Current potential basis
 -----------------------
 
@@ -69,8 +77,14 @@ The derivatives used throughout are
    \frac{\partial}{\partial\theta}\cos(m\theta-n\zeta) &= -m\sin(m\theta-n\zeta) \\
    \frac{\partial}{\partial\zeta}\cos(m\theta-n\zeta) &= n\sin(m\theta-n\zeta)
 
-REGCOIL matrices (chi2_K regularization)
-----------------------------------------
+Code mapping
+~~~~~~~~~~~
+
+- Fourier mode ordering: ``regcoil_jax/modes.py`` (``init_fourier_modes``)
+- Basis + derivative operators: ``regcoil_jax/build_basis.py`` (``build_basis_and_f``)
+
+Least-squares formulation
+-------------------------
 
 REGCOIL constructs matrices so that the least-squares problem can be written (schematically) as
 
@@ -78,16 +92,53 @@ REGCOIL constructs matrices so that the least-squares problem can be written (sc
 
    \min_{\Phi} \;\; \chi_B^2(\Phi) + \lambda \, \chi_K^2(\Phi)
 
-For the implemented subset (regularization term ``chi2_K``), the diagnostics are
+For each :math:`\lambda`, REGCOIL solves for the single-valued Fourier coefficients :math:`\Phi_j`.
+The multi-valued (secular) part that enforces net currents is represented as a known vector field
+:math:`\mathbf{d}(\theta,\zeta)` on the winding surface, and the single-valued part contributes through
+basis vector fields :math:`\mathbf{f}_j(\theta,\zeta)`.
+
+Define
+
+.. math::
+
+   \Delta \mathbf{K}(\theta,\zeta) = \mathbf{d}(\theta,\zeta) - \sum_j \Phi_j \, \mathbf{f}_j(\theta,\zeta),
+   \qquad
+   \mathbf{K}(\theta,\zeta) = \frac{\Delta \mathbf{K}(\theta,\zeta)}{\|\mathbf{N}_c(\theta,\zeta)\|}.
+
+Code mapping (core arrays)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Symbol
+     - Code / variable name
+   * - :math:`\mathbf{f}_j`
+     - ``mats["fx"]``, ``mats["fy"]``, ``mats["fz"]`` (from ``regcoil_jax/build_basis.py``)
+   * - :math:`\mathbf{d}`
+     - ``mats["dx"]``, ``mats["dy"]``, ``mats["dz"]`` (from ``regcoil_jax/build_matrices_jax.py``)
+   * - :math:`\|\mathbf{N}_c\|`
+     - ``mats["normNc"]`` (flattened coil ``normN``)
+   * - :math:`\|\mathbf{N}_p\|`
+     - ``mats["normNp"]`` (flattened plasma ``normN``)
+
+Diagnostics (field and current)
+-------------------------------
+
+The field error is
 
 .. math::
 
    \chi_B^2 &= n_\text{fp}\,\Delta\theta_p\,\Delta\zeta_p \sum_{(\theta,\zeta)\in S_p}
-      B_n(\theta,\zeta)^2 \, \|\mathbf{N}_p(\theta,\zeta)\| \\
-   \chi_K^2 &= n_\text{fp}\,\Delta\theta_c\,\Delta\zeta_c \sum_{(\theta,\zeta)\in S_c}
-      \frac{\|\Delta\mathbf{K}(\theta,\zeta)\|^2}{\|\mathbf{N}_c(\theta,\zeta)\|}
+      B_n(\theta,\zeta)^2 \, \|\mathbf{N}_p(\theta,\zeta)\|
 
-where :math:`S_p` is the plasma surface grid and :math:`S_c` is the coil (winding) surface grid.
+The current density diagnostic reported as ``chi2_K`` is
+
+.. math::
+
+   \chi_K^2 = n_\text{fp}\,\Delta\theta_c\,\Delta\zeta_c \sum_{(\theta,\zeta)\in S_c}
+      \frac{\|\Delta\mathbf{K}(\theta,\zeta)\|^2}{\|\mathbf{N}_c(\theta,\zeta)\|}.
 
 For any quantity :math:`Q(\theta,\zeta)`, the max-norm diagnostics are
 
@@ -95,6 +146,12 @@ For any quantity :math:`Q(\theta,\zeta)`, the max-norm diagnostics are
 
    \max|B_n| = \max_{S_p} |B_n(\theta,\zeta)|,\qquad
    \max K = \max_{S_c} \|\Delta\mathbf{K}(\theta,\zeta)\|
+
+Code mapping
+~~~~~~~~~~~
+
+- Diagnostics: ``regcoil_jax/solve_jax.py`` (``diagnostics``)
+- NetCDF outputs: ``regcoil_jax/io_output.py`` (``chi2_B``, ``chi2_K``, ``max_Bnormal``, ``max_K``)
 
 Lambda scaling in the linear solve
 ----------------------------------
@@ -107,6 +164,56 @@ REGCOIL solves a symmetric linear system for each :math:`\lambda`. For numerical
    \mathbf{b}(\lambda) &= \frac{1}{1+\lambda}\mathbf{b}_B + \frac{\lambda}{1+\lambda}\mathbf{b}_K
 
 This scaling leaves the solution unchanged but keeps :math:`\mathbf{A}` and :math:`\mathbf{b}` :math:`\mathcal{O}(1)` for very large :math:`\lambda`.
+
+Code mapping
+~~~~~~~~~~~
+
+- ``regcoil_jax/solve_jax.py`` (``solve_for_lambdas`` / ``solve_one_lambda``)
+
+Regularization options
+----------------------
+
+``regularization_term_option`` selects the regularization term:
+
+- ``"chi2_K"``: regularize all Cartesian components of :math:`\Delta\mathbf{K}`.
+- ``"K_xy"``: regularize only :math:`(\Delta K_x,\Delta K_y)`.
+- ``"K_zeta"``: regularize only the toroidal (zeta) tangent component of :math:`\Delta\mathbf{K}`.
+- ``"Laplace-Beltrami"``: regularize the Laplace–Beltrami operator applied to :math:`\Phi` on the winding surface.
+
+K-regularization family
+~~~~~~~~~~~~~~~~~~~~~~~
+
+All K-style regularizations use the same :math:`1/\|\mathbf{N}_c\|` weighting:
+
+.. math::
+
+   \langle a, b \rangle = \Delta\theta_c\,\Delta\zeta_c \sum_{S_c} a(\theta,\zeta)\,b(\theta,\zeta)\,\frac{1}{\|\mathbf{N}_c(\theta,\zeta)\|}.
+
+Then:
+
+.. math::
+
+   \chi_{K}^2(\Phi) &= \langle \Delta K_x, \Delta K_x\rangle + \langle \Delta K_y, \Delta K_y\rangle + \langle \Delta K_z, \Delta K_z\rangle, \\
+   \chi_{K_{xy}}^2(\Phi) &= \langle \Delta K_x, \Delta K_x\rangle + \langle \Delta K_y, \Delta K_y\rangle.
+
+For ``K_zeta``, define the unit tangent along the winding-surface coordinate :math:`\zeta`:
+
+.. math::
+
+   \hat{\mathbf{t}}_\zeta(\theta,\zeta) = \frac{\mathbf{r}_{c,\zeta}(\theta,\zeta)}{\|\mathbf{r}_{c,\zeta}(\theta,\zeta)\|},
+   \qquad
+   \Delta K_\zeta(\theta,\zeta) = \Delta\mathbf{K}(\theta,\zeta)\cdot \hat{\mathbf{t}}_\zeta(\theta,\zeta).
+
+Then:
+
+.. math::
+
+   \chi_{K_\zeta}^2(\Phi) = \langle \Delta K_\zeta, \Delta K_\zeta\rangle.
+
+Code mapping:
+
+- ``regcoil_jax/build_matrices_jax.py`` computes ``matrix_reg`` and ``RHS_reg`` from ``fx/fy/fz`` and ``dx/dy/dz``.
+- ``K_zeta`` additionally projects onto ``rze`` (``dr/dzeta``) to form :math:`\hat{\mathbf{t}}_\zeta`.
 
 Laplace–Beltrami regularization
 -------------------------------

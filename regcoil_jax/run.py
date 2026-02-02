@@ -184,12 +184,15 @@ def run_regcoil(
             if verbose:
                 print(f"[regcoil_jax] debug_dir: could not dump surface shapes: {e}")
 
-    t0_total = _time.time()
+    t0_total = _time.perf_counter()
 
     if verbose:
         print("[regcoil_jax] building matrices (this may take a bit the first time due to JIT)...")
+    t0_build = _time.perf_counter()
     mats = build_matrices(inputs, plasma, coil)
+    t1_build = _time.perf_counter()
 
+    t0_solve = _time.perf_counter()
     general_option = int(inputs.get("general_option", 1))
     if general_option == 2:
         from .io_nescout import read_nescout_potentials
@@ -246,9 +249,10 @@ def run_regcoil(
         chi2_B, chi2_K, max_B, max_K = diagnostics(mats, sols)
         idx = choose_lambda(inputs, lambdas, chi2_B, chi2_K, max_B, max_K)
         exit_code = 0
+    t1_solve = _time.perf_counter()
 
     out_nc = os.path.join(input_dir, "regcoil_out" + base[10:] + ".nc")
-    t1_total = _time.time()
+    t1_total = _time.perf_counter()
     write_output_nc(
         out_nc,
         inputs,
@@ -269,6 +273,9 @@ def run_regcoil(
             f.write(f"input={input_path_abs}\n")
             f.write(f"nbasis={int(mats['matrix_B'].shape[0])}\n")
             f.write(f"lambdas=[{float(lambdas[0]):.6e}, {float(lambdas[-1]):.6e}] n={len(lambdas)}\n")
+            f.write(f"time_build_matrices_s={float(t1_build - t0_build):.6f}\n")
+            f.write(f"time_solve_and_diagnostics_s={float(t1_solve - t0_solve):.6f}\n")
+            f.write(f"time_total_s={float(t1_total - t0_total):.6f}\n")
             if general_option in (4, 5):
                 f.write(f"target_option={str(inputs.get('target_option', 'max_K')).strip()}\n")
                 f.write(f"target_value={float(inputs.get('target_value', 0.0)):.16e}\n")
@@ -286,6 +293,7 @@ def run_regcoil(
             print(f"[regcoil_jax] WARNING: could not write summary log: {e}")
 
     if verbose:
+        print(f"[regcoil_jax] timing: build_matrices={float(t1_build - t0_build):.3f}s solve+diagnostics={float(t1_solve - t0_solve):.3f}s total={float(t1_total - t0_total):.3f}s")
         for j in range(len(lambdas)):
             mark = "*" if (idx is not None and j == idx) else " "
             print(
