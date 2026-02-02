@@ -31,6 +31,18 @@ Postprocess into figures + ParaView files (coil cutting + field lines):
 python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/3_advanced/regcoil_in.lambda_search_1
 ```
 
+Enable Poincaré section outputs (points + figure):
+
+```bash
+python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --poincare --input examples/3_advanced/regcoil_in.lambda_search_1
+```
+
+Or run the full “solve → cut coils → field lines → Poincaré” wrapper:
+
+```bash
+python examples/3_advanced/full_solve_cut_coils_and_poincare.py
+```
+
 Disable figures or ParaView outputs:
 
 ```bash
@@ -62,6 +74,12 @@ JAX-specific demo (autodiff through VMEC offset-surface geometry + matrix build 
 python examples/3_advanced/jax_optimize_separation_vmec_offset.py
 ```
 
+JAX-specific demo (cut coils, then optimize a different current for each coil via autodiff through Biot–Savart):
+
+```bash
+python examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py
+```
+
 ## Status
 - ✅ CLI runs the 3 example inputs above and writes `regcoil_out.*.nc` + `regcoil_out.*.log` next to the input file.
 - ✅ NetCDF output schema + values are regression-tested against committed Fortran reference `.nc` files (`tests/fortran_outputs/`) for a curated set of inputs.
@@ -71,5 +89,6 @@ python examples/3_advanced/jax_optimize_separation_vmec_offset.py
 - ✅ Additional geometry options: plasma `geometry_option_plasma` in `{0,1,2,3,6,7}` and coil `geometry_option_coil` in `{0,1,2,3,4}`.
 - ✅ Includes pytest regression tests (`tests/`) that run `regcoil_jax` and compare against stored Fortran outputs.
 - ✅ Includes a coil-cutting + VTK postprocessing example (`docs/visualization.rst`).
+- ✅ Supports per-coil currents in coil-cutting outputs (MAKECOIL file + VTK cell-data), and optional Poincaré-section outputs.
 
 See `PORTING_NOTES.md` for details on what was fixed and how to validate parity.

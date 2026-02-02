@@ -101,6 +101,9 @@ def main():
     parser.add_argument("--fieldline_steps", type=int, default=800)
     parser.add_argument("--fieldline_ds", type=float, default=0.03)
     parser.add_argument("--fieldline_offset", type=float, default=0.15)
+    parser.add_argument("--poincare", action="store_true", help="Compute and write Poincaré section (R,Z) points.")
+    parser.add_argument("--poincare_phi0", type=float, default=0.0, help="Toroidal angle φ0 (radians) for Poincaré section.")
+    parser.add_argument("--poincare_max_points", type=int, default=400, help="Max Poincaré points per traced line.")
     parser.add_argument("--write_vtu_point_cloud", action="store_true", help="Write a VTU point cloud of |B| from coil filaments.")
     parser.add_argument("--vtu_n", type=int, default=14, help="Resolution per axis for VTU point cloud (N^3 points).")
     parser.add_argument("--vtu_margin", type=float, default=0.6, help="Bounding-box margin (meters) for VTU point cloud.")
@@ -247,7 +250,7 @@ def main():
     # Cut coils (filaments) and write MAKECOIL file
     # ----------------------------
     from regcoil_jax.coil_cutting import cut_coils_from_current_potential, write_makecoil_filaments
-    from regcoil_jax.fieldlines import build_filament_field, trace_fieldlines, bfield_from_filaments
+    from regcoil_jax.fieldlines import build_filament_field_multi_current, trace_fieldlines, bfield_from_filaments, poincare_points
     from regcoil_jax.vtk_io import (
         flatten_grid_points,
         quad_mesh_connectivity,
@@ -270,7 +273,7 @@ def main():
         )
 
         coils_path = out_dir / f"coils.{case}"
-        write_makecoil_filaments(coils_path, filaments_xyz=coils.filaments_xyz, coil_current=coils.coil_current, nfp=nfp)
+        write_makecoil_filaments(coils_path, filaments_xyz=coils.filaments_xyz, coil_currents=coils.coil_currents, nfp=nfp)
         print("[postprocess] wrote:", coils_path)
 
     # ----------------------------
@@ -351,14 +354,19 @@ def main():
             offset += n
 
         pts_all = np.concatenate(pts_all, axis=0)
-        write_vtp_polydata(vtk_dir / "coils.vtp", points=pts_all, lines=lines)
+        write_vtp_polydata(
+            vtk_dir / "coils.vtp",
+            points=pts_all,
+            lines=lines,
+            cell_data={"coil_current": np.asarray(coils.coil_currents, dtype=float)},
+        )
 
     # ----------------------------
     # Field lines (coil-only field from filaments)
     # ----------------------------
     field = None
     if coils is not None and (not args.no_fieldlines):
-        field = build_filament_field(filaments_xyz=coils.filaments_xyz, coil_current=coils.coil_current)
+        field = build_filament_field_multi_current(filaments_xyz=coils.filaments_xyz, coil_currents=coils.coil_currents)
 
         # Start points: choose points on the plasma surface (zeta index 0), offset outward along the normal.
         starts = []
@@ -389,6 +397,43 @@ def main():
             offset += n
         pts_all = np.concatenate(pts_all, axis=0) if pts_all else np.zeros((0, 3))
         write_vtp_polydata(vtk_dir / "fieldlines.vtp", points=pts_all, lines=lines)
+
+        if args.poincare:
+            psets = poincare_points(
+                flines,
+                nfp=int(nfp),
+                phi0=float(args.poincare_phi0),
+                max_points_per_line=int(args.poincare_max_points),
+            )
+            pts = []
+            line_id = []
+            for j, ps in enumerate(psets):
+                if ps.size == 0:
+                    continue
+                pts.append(ps)
+                line_id.append(np.full((ps.shape[0],), j, dtype=float))
+            if pts:
+                pts_all = np.concatenate(pts, axis=0)
+                line_id_all = np.concatenate(line_id, axis=0)
+                write_vtp_polydata(
+                    vtk_dir / "poincare_points.vtp",
+                    points=pts_all,
+                    verts=np.arange(pts_all.shape[0], dtype=np.int64),
+                    point_data={"line_id": line_id_all},
+                )
+                if not args.no_figures:
+                    plt = _setup_matplotlib()
+                    fig, ax = plt.subplots(figsize=(6.0, 5.0))
+                    R = np.sqrt(pts_all[:, 0] ** 2 + pts_all[:, 1] ** 2)
+                    Z = pts_all[:, 2]
+                    sc = ax.scatter(R, Z, s=6, c=line_id_all, cmap="tab10", alpha=0.8, linewidths=0)
+                    ax.set_xlabel("R [m]")
+                    ax.set_ylabel("Z [m]")
+                    ax.set_title(f"Poincaré section (phi0={float(args.poincare_phi0):.3f} rad)")
+                    fig.colorbar(sc, ax=ax, label="line_id")
+                    fig.tight_layout()
+                    fig.savefig(fig_dir / "poincare_RZ.png")
+                    plt.close(fig)
 
     # ----------------------------
     # Optional VTU point cloud (|B| in a 3D box), coil-filament field only

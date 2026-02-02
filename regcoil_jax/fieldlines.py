@@ -16,6 +16,11 @@ class FilamentField:
 
 
 def build_filament_field(*, filaments_xyz: list[Any], coil_current: float) -> FilamentField:
+    """Precompute segment arrays for a coil set.
+
+    Args:
+      coil_current: legacy uniform current for all filaments.
+    """
     mids = []
     dls = []
     currents = []
@@ -30,6 +35,33 @@ def build_filament_field(*, filaments_xyz: list[Any], coil_current: float) -> Fi
         mids.append(mid)
         dls.append(dl)
         currents.append(np.full((mid.shape[0],), float(coil_current), dtype=float))
+
+    seg_mid = np.concatenate(mids, axis=0)
+    seg_dl = np.concatenate(dls, axis=0)
+    seg_I = np.concatenate(currents, axis=0)
+    return FilamentField(seg_midpoints=seg_mid, seg_dls=seg_dl, seg_currents=seg_I)
+
+
+def build_filament_field_multi_current(*, filaments_xyz: list[Any], coil_currents: np.ndarray) -> FilamentField:
+    """Like :func:`build_filament_field`, but allows a different current per filament."""
+    coil_currents = np.asarray(coil_currents, dtype=float).reshape(-1)
+    if coil_currents.size != len(filaments_xyz):
+        raise ValueError("coil_currents must have length equal to number of filaments")
+
+    mids = []
+    dls = []
+    currents = []
+    for pts_any, I in zip(filaments_xyz, coil_currents):
+        pts = np.asarray(pts_any, dtype=float)
+        if pts.ndim != 2 or pts.shape[1] != 3:
+            raise ValueError(f"filament points must be (N,3), got {pts.shape}")
+        r0 = pts
+        r1 = np.roll(pts, shift=-1, axis=0)
+        dl = r1 - r0
+        mid = 0.5 * (r0 + r1)
+        mids.append(mid)
+        dls.append(dl)
+        currents.append(np.full((mid.shape[0],), float(I), dtype=float))
 
     seg_mid = np.concatenate(mids, axis=0)
     seg_dl = np.concatenate(dls, axis=0)
@@ -116,3 +148,67 @@ def trace_fieldlines(
         lines.append(line)
     return lines
 
+
+def poincare_points_for_line(
+    line_xyz: np.ndarray,
+    *,
+    nfp: int,
+    phi0: float = 0.0,
+    max_points: int | None = None,
+) -> np.ndarray:
+    """Extract Poincaré section points for a 3D field line at toroidal angle `phi0` (mod 2π/nfp).
+
+    We detect crossings using the unwrapped toroidal angle and linearly interpolate between steps.
+    The returned points are 3D xyz; for plotting, use R=sqrt(x^2+y^2) and Z=z.
+    """
+    xyz = np.asarray(line_xyz, dtype=float)
+    if xyz.ndim != 2 or xyz.shape[1] != 3:
+        raise ValueError("line_xyz must be (N,3)")
+    if xyz.shape[0] < 2:
+        return np.zeros((0, 3), dtype=float)
+
+    nfp = int(nfp)
+    if nfp <= 0:
+        raise ValueError("nfp must be positive")
+    period = 2.0 * np.pi / nfp
+
+    phi = np.arctan2(xyz[:, 1], xyz[:, 0]) - float(phi0)
+    phi_u = np.unwrap(phi)
+    k = np.floor(phi_u / period).astype(int)
+
+    pts = []
+    for i in range(xyz.shape[0] - 1):
+        k0 = int(k[i])
+        k1 = int(k[i + 1])
+        if k1 == k0:
+            continue
+        # Choose the first crossed plane between i and i+1.
+        if phi_u[i + 1] > phi_u[i]:
+            target = (k0 + 1) * period
+        else:
+            target = k0 * period
+        denom = (phi_u[i + 1] - phi_u[i])
+        if denom == 0.0:
+            continue
+        t = (target - phi_u[i]) / denom
+        if not (0.0 <= t <= 1.0):
+            continue
+        p = (1.0 - t) * xyz[i] + t * xyz[i + 1]
+        pts.append(p)
+        if max_points is not None and len(pts) >= int(max_points):
+            break
+    return np.asarray(pts, dtype=float)
+
+
+def poincare_points(
+    lines_xyz: list[np.ndarray],
+    *,
+    nfp: int,
+    phi0: float = 0.0,
+    max_points_per_line: int | None = None,
+) -> list[np.ndarray]:
+    """Poincaré points for multiple field lines."""
+    out = []
+    for line in lines_xyz:
+        out.append(poincare_points_for_line(line, nfp=nfp, phi0=phi0, max_points=max_points_per_line))
+    return out

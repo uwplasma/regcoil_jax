@@ -30,12 +30,26 @@ The shared postprocessing script can optionally:
 - generate publication-ready PNG figures
 - cut filamentary coils (contours of `current_potential`)
 - write ParaView-readable VTK files for surfaces/coils/field lines
+- (optionally) extract a Poincaré section and write `poincare_points.vtp`
 
 Example::
 
 ```bash
 python examples/3_advanced/postprocess_make_figures_and_vtk.py --run \
   --input examples/3_advanced/regcoil_in.lambda_search_1
+```
+
+Enable Poincaré section output:
+
+```bash
+python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --poincare \
+  --input examples/3_advanced/regcoil_in.lambda_search_1
+```
+
+For a one-command “full workflow” wrapper (solve → cut coils → field lines → Poincaré), see:
+
+```bash
+python examples/3_advanced/full_solve_cut_coils_and_poincare.py
 ```
 
 You can independently disable figures or VTK outputs:

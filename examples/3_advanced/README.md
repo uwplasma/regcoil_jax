@@ -23,6 +23,7 @@ Larger showcase case (not CI-tested):
 Postprocessing:
 - `postprocess_make_figures_and_vtk.py`: generates publication-ready figures and ParaView `.vtp` files
   (winding surface, plasma surface, cut coils, and filament field lines), plus optional `.vts`/`.vtu` outputs.
+- `full_solve_cut_coils_and_poincare.py`: one-command wrapper that runs the full workflow including a Poincaré section output.
 - `run_cli_and_postprocess.py`: wrapper that runs the CLI and (optionally) calls the postprocess script.
 - `compare_fortran_and_jax.py`: runs the local Fortran `regcoil` binary and `regcoil_jax` on the same input and compares outputs.
 - `jax_optimize_separation_vmec_offset.py`: autodiff demo that optimizes the offset-surface separation parameter.
@@ -33,3 +34,4 @@ Postprocess toggles:
 - Skip ParaView outputs: `--no_vtk`
 - Skip coil cutting: `--no_coils`
 - Skip field line tracing: `--no_fieldlines`
+- Enable Poincaré section output: `--poincare` (and set plane with `--poincare_phi0`)

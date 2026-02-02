@@ -24,6 +24,7 @@ def write_vtp_polydata(
     path: str | Path,
     *,
     points: Any,
+    verts: Any | None = None,
     polys: Any | None = None,
     lines: Any | None = None,
     point_data: dict[str, Any] | None = None,
@@ -35,6 +36,7 @@ def write_vtp_polydata(
 
     Args:
       points: (N,3) float array
+      verts:  list[int] or 1D int array of vertex indices (for point clouds)
       polys:  (M,k) int array of polygon connectivity (k vertices per poly) OR list[list[int]]
       lines:  list[list[int]] of polyline vertex indices
       point_data: dict of arrays with first dimension N
@@ -61,8 +63,15 @@ def write_vtp_polydata(
             if np.any(line < 0) or np.any(line >= n_points):
                 raise ValueError("lines contains out-of-range point indices")
 
+    verts_arr = None
+    if verts is not None:
+        verts_arr = _as_array_1d(verts, dtype=np.int64)
+        if np.any(verts_arr < 0) or np.any(verts_arr >= n_points):
+            raise ValueError("verts contains out-of-range point indices")
+
     n_polys = int(polys_arr.shape[0]) if polys_arr is not None else 0
     n_lines = int(len(lines_list)) if lines_list is not None else 0
+    n_verts = int(verts_arr.size) if verts_arr is not None else 0
 
     def _fmt_f(arr: np.ndarray) -> str:
         return " ".join(f"{x:.16e}" for x in arr.reshape(-1))
@@ -94,7 +103,7 @@ def write_vtp_polydata(
         f.write('<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">\n')
         f.write("  <PolyData>\n")
         f.write(
-            f'    <Piece NumberOfPoints="{n_points}" NumberOfVerts="0" NumberOfLines="{n_lines}" '
+            f'    <Piece NumberOfPoints="{n_points}" NumberOfVerts="{n_verts}" NumberOfLines="{n_lines}" '
             f'NumberOfStrips="0" NumberOfPolys="{n_polys}">\n'
         )
 
@@ -121,6 +130,21 @@ def write_vtp_polydata(
         f.write(f"          {_fmt_f(pts.astype(float))}\n")
         f.write("        </DataArray>\n")
         f.write("      </Points>\n")
+
+        # Verts (point cloud)
+        if verts_arr is not None:
+            connectivity = verts_arr.reshape(-1)
+            offsets = np.arange(1, n_verts + 1, dtype=np.int64)
+            f.write("      <Verts>\n")
+            f.write('        <DataArray type="Int64" Name="connectivity" format="ascii">\n')
+            f.write(f"          {_fmt_i(connectivity)}\n")
+            f.write("        </DataArray>\n")
+            f.write('        <DataArray type="Int64" Name="offsets" format="ascii">\n')
+            f.write(f"          {_fmt_i(offsets)}\n")
+            f.write("        </DataArray>\n")
+            f.write("      </Verts>\n")
+        else:
+            f.write("      <Verts/>\n")
 
         # Lines
         if lines_list is not None:

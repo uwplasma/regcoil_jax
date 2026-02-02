@@ -10,7 +10,7 @@ import numpy as np
 @dataclass(frozen=True)
 class CutCoilsResult:
     filaments_xyz: list[np.ndarray]  # list of (N,3) arrays
-    coil_current: float
+    coil_currents: np.ndarray  # (ncoils,) current per filament [A]
     coils_per_half_period: int
     nfp: int
 
@@ -90,8 +90,12 @@ def _contours_matplotlib(
 ) -> list[np.ndarray]:
     """Return contour polylines as arrays of shape (N,2) with columns (zeta, theta)."""
     try:
+        import os
+        import tempfile
         import matplotlib
 
+        # Avoid user-home cache issues in CI / sandboxes.
+        os.environ.setdefault("MPLCONFIGDIR", tempfile.gettempdir())
         matplotlib.use("Agg", force=True)
         import matplotlib.pyplot as plt
     except Exception as e:  # pragma: no cover
@@ -202,10 +206,11 @@ def cut_coils_from_current_potential(
         raise RuntimeError("No coils were found by contouring current_potential.")
 
     coil_current = float(net_poloidal_current_Amperes) / float(ncoils) if abs(net_poloidal_current_Amperes) > 0 else 0.0
+    coil_currents = np.full((ncoils,), coil_current, dtype=float)
 
     return CutCoilsResult(
         filaments_xyz=filaments_xyz,
-        coil_current=coil_current,
+        coil_currents=coil_currents,
         coils_per_half_period=int(coils_per_half_period),
         nfp=int(nfp),
     )
@@ -215,23 +220,31 @@ def write_makecoil_filaments(
     path: str | Path,
     *,
     filaments_xyz: list[np.ndarray],
-    coil_current: float,
+    coil_currents: np.ndarray | None = None,
+    coil_current: float | None = None,
     nfp: int,
 ) -> None:
     """Write a `coils.*` filament file (MAKECOIL-style), matching regcoil's helper script."""
     path = Path(path)
+    if coil_currents is None:
+        if coil_current is None:
+            raise ValueError("Must provide either coil_currents or coil_current")
+        coil_currents = np.full((len(filaments_xyz),), float(coil_current), dtype=float)
+    coil_currents = np.asarray(coil_currents, dtype=float).reshape(-1)
+    if coil_currents.size != len(filaments_xyz):
+        raise ValueError("coil_currents must have length equal to number of filaments")
+
     with path.open("w", encoding="utf-8") as f:
         f.write(f"periods {int(nfp)}\n")
         f.write("begin filament\n")
         f.write("mirror NIL\n")
-        for pts in filaments_xyz:
+        for pts, I in zip(filaments_xyz, coil_currents):
             pts = np.asarray(pts, dtype=float)
             if pts.ndim != 2 or pts.shape[1] != 3:
                 raise ValueError(f"filament points must be (N,3), got {pts.shape}")
             for (x, y, z) in pts:
-                f.write(f"{x:14.22e} {y:14.22e} {z:14.22e} {coil_current:14.22e}\n")
+                f.write(f"{x:14.22e} {y:14.22e} {z:14.22e} {float(I):14.22e}\n")
             # Close the loop with MAKECOIL's sentinel.
             x0, y0, z0 = pts[0]
             f.write(f"{x0:14.22e} {y0:14.22e} {z0:14.22e} {0.0:14.22e} 1 Modular\n")
         f.write("end\n")
-

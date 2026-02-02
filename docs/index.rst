@@ -13,4 +13,5 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
    theory
    parity
    feature_matrix
+   optimization
    visualization
