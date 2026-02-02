@@ -58,11 +58,11 @@ Plasma surface (``geometry_option_plasma``):
      - OK
      - Implemented via outermost-half approximation (average last two full-grid surfaces)
    * - 4 (VMEC + extra handling)
-     - TODO
-     - Not implemented yet
+     - OK (JAX)
+     - VMEC straight-field-line poloidal coordinate. The reference Fortran in this workspace can fail for typical VMEC files (angle/units inconsistency), so this option is smoke-tested (not netCDF parity-tested).
    * - 5 (EFIT)
-     - TODO
-     - Not implemented yet
+     - OK
+     - EFIT gfile support. Full netCDF parity is regression-tested for ``efit_psiN=1.0`` (LCFS); ``efit_psiN<1`` uses a coarse-grid interpolation approximation.
    * - 6 (Fourier table)
      - OK
      -

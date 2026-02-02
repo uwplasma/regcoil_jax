@@ -25,6 +25,8 @@ Additional CLI inputs in this tier:
 - `examples/2_intermediate/regcoil_in.torus_svd_scan`: REGCOIL `general_option=3` (NESCOIL-style truncated SVD scan).
 - `examples/2_intermediate/regcoil_in.torus_nescout_diagnostics`: REGCOIL `general_option=2` (diagnostics for a NESCOIL `nescout` current potential).
 - `examples/2_intermediate/regcoil_in.lambda_search_option4_torus`: REGCOIL `general_option=4` (lambda search without feasibility checks).
+- `examples/2_intermediate/regcoil_in.plasma_option_4_vmec_straight_fieldline`: plasma `geometry_option_plasma=4` (VMEC straight-field-line poloidal coordinate).
+- `examples/2_intermediate/regcoil_in.plasma_option_5_efit_lcfs`: plasma `geometry_option_plasma=5` (EFIT gfile, LCFS via `efit_psiN=1.0`).
 
 Included scripts:
 - `jax_optimize_coil_minor_radius.py`: optimize `a_coil` for the `Bnormal_from_net_coil_currents` kernel (fastest).

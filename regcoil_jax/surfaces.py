@@ -12,6 +12,8 @@ from .surface_metrics import metrics_and_normals
 from .io_nescin import read_nescin_current_surface
 from .io_surface_fourier_table import read_surface_fourier_table
 from .io_focus import read_focus_surface
+from .plasma_vmec_straight_fieldline import build_vmec_straight_fieldline_plasma_surface
+from .io_efit import read_efit_gfile, efit_boundary_fourier
 
 def _to_3TZ(xyz_TZ3):
     # (T,Z,3) -> (3,T,Z)
@@ -95,6 +97,82 @@ def plasma_surface_from_inputs(inputs, vmec_boundary: FourierSurface | None):
         rmns_plasma = s.rmns
         zmnc_plasma = s.zmnc
         lasym = bool(s.lasym)
+    elif gopt_eff == 4:
+        # VMEC, straight-field-line poloidal coordinate (regcoil_init_plasma_mod.f90 case(4)).
+        wout = inputs.get("wout_filename", None)
+        if wout is None:
+            raise ValueError("geometry_option_plasma=4 requires wout_filename")
+        surf_np = build_vmec_straight_fieldline_plasma_surface(
+            wout_filename=str(wout),
+            mpol_transform_refinement=float(inputs.get("mpol_transform_refinement", 5.0)),
+            ntor_transform_refinement=float(inputs.get("ntor_transform_refinement", 1.0)),
+        )
+        s = FourierSurface(
+            nfp=int(surf_np.nfp),
+            lasym=False,
+            xm=jnp.asarray(surf_np.xm, dtype=jnp.int32),
+            xn=jnp.asarray(surf_np.xn, dtype=jnp.int32),
+            rmnc=jnp.asarray(surf_np.rmnc, dtype=jnp.float64),
+            zmns=jnp.asarray(surf_np.zmns, dtype=jnp.float64),
+            rmns=jnp.asarray(surf_np.rmns, dtype=jnp.float64),
+            zmnc=jnp.asarray(surf_np.zmnc, dtype=jnp.float64),
+        )
+        nfp = int(s.nfp)
+        ze = zeta_grid(nzeta, nfp)
+        xyz, dth, dze, d2th2, d2thze, d2ze2 = eval_surface_xyz_and_derivs2(s, th, ze)
+        r = _to_3TZ(xyz)
+        rth = _to_3TZ(dth)
+        rze = _to_3TZ(dze)
+        rtt = _to_3TZ(d2th2)
+        rtz = _to_3TZ(d2thze)
+        rzz = _to_3TZ(d2ze2)
+        _, _, _, nunit, normN = metrics_and_normals(rth, rze)
+        xm_plasma = s.xm
+        xn_plasma = s.xn
+        rmnc_plasma = s.rmnc
+        zmns_plasma = s.zmns
+        rmns_plasma = s.rmns
+        zmnc_plasma = s.zmnc
+        lasym = False
+    elif gopt_eff == 5:
+        # EFIT (regcoil_init_plasma_mod.f90 case(5)).
+        efit_filename = inputs.get("efit_filename", None)
+        if efit_filename is None:
+            raise ValueError("geometry_option_plasma=5 requires efit_filename")
+        # parse_namelist lowercases keys, so prefer efit_psin but keep a fallback.
+        psiN = float(inputs.get("efit_psin", inputs.get("efit_psiN", 0.98)))
+        num_modes = int(inputs.get("efit_num_modes", 10))
+        gfile = read_efit_gfile(str(efit_filename))
+        rmnc, zmns, rmns, zmnc = efit_boundary_fourier(gfile=gfile, psiN_desired=psiN, num_modes=num_modes)
+        nfp = int(inputs.get("nfp_imposed", 1))
+        ze = zeta_grid(nzeta, nfp)
+        xm = jnp.asarray(np.arange(num_modes, dtype=np.int32), dtype=jnp.int32)
+        xn = jnp.asarray(np.zeros((num_modes,), dtype=np.int32), dtype=jnp.int32)
+        s = FourierSurface(
+            nfp=nfp,
+            lasym=True,
+            xm=xm,
+            xn=xn,
+            rmnc=jnp.asarray(rmnc, dtype=jnp.float64),
+            zmns=jnp.asarray(zmns, dtype=jnp.float64),
+            rmns=jnp.asarray(rmns, dtype=jnp.float64),
+            zmnc=jnp.asarray(zmnc, dtype=jnp.float64),
+        )
+        xyz, dth, dze, d2th2, d2thze, d2ze2 = eval_surface_xyz_and_derivs2(s, th, ze)
+        r = _to_3TZ(xyz)
+        rth = _to_3TZ(dth)
+        rze = _to_3TZ(dze)
+        rtt = _to_3TZ(d2th2)
+        rtz = _to_3TZ(d2thze)
+        rzz = _to_3TZ(d2ze2)
+        _, _, _, nunit, normN = metrics_and_normals(rth, rze)
+        xm_plasma = s.xm
+        xn_plasma = s.xn
+        rmnc_plasma = s.rmnc
+        zmns_plasma = s.zmns
+        rmns_plasma = s.rmns
+        zmnc_plasma = s.zmnc
+        lasym = True
     elif gopt_eff == 6:
         # Read a simple Fourier table (see regcoil_init_plasma_mod.f90 case(6)).
         fname = inputs.get("shape_filename_plasma", None)
@@ -165,7 +243,7 @@ def plasma_surface_from_inputs(inputs, vmec_boundary: FourierSurface | None):
         zmnc_plasma = s.zmnc
         lasym = True
     else:
-        raise NotImplementedError(f"geometry_option_plasma={gopt} not implemented yet (only 0,1,2,3,6,7).")
+        raise NotImplementedError(f"geometry_option_plasma={gopt} not implemented yet (only 0,1,2,3,4,5,6,7).")
     out = dict(
         nfp=nfp,
         lasym=bool(lasym),

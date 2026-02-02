@@ -110,13 +110,32 @@ def resolve_existing_path(path: str) -> str:
 def parse_namelist(path: str, namelist_name: str = "regcoil_nml") -> Dict[str, Any]:
     path = resolve_existing_path(path)
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        text = f.read()
-    # Extract &name ... /
-    pattern = re.compile(r"&\s*" + re.escape(namelist_name) + r"\b(.*?)/\s*", re.DOTALL | re.IGNORECASE)
-    m = pattern.search(text)
-    if not m:
+        lines = f.read().splitlines()
+
+    # Extract &name ... / in a way that is robust to paths containing '/' inside strings.
+    # REGCOIL inputs conventionally terminate the namelist with a standalone '/' line.
+    start_re = re.compile(r"^\s*&\s*" + re.escape(namelist_name) + r"\b", re.IGNORECASE)
+    end_re = re.compile(r"^\s*/\s*$", re.IGNORECASE)
+    end2_re = re.compile(r"^\s*&\s*end\s*$", re.IGNORECASE)
+
+    in_nml = False
+    block_lines: list[str] = []
+    for raw in lines:
+        if not in_nml:
+            if start_re.search(raw):
+                in_nml = True
+            continue
+
+        # Only treat '/' as the terminator if it is the first non-comment token on the line.
+        s = strip_fortran_comment(raw).strip()
+        if end_re.match(s) or end2_re.match(s):
+            break
+        block_lines.append(raw)
+
+    if not in_nml:
         raise ValueError(f"Did not find namelist &{namelist_name} in {path}")
-    block = m.group(1)
+
+    block = "\n".join(block_lines)
     assigns = split_assignments(block)
     out: Dict[str, Any] = {}
     for a in assigns:

@@ -24,6 +24,23 @@ class VmecBoundary:
     ns: int | None
     Rmajor_p: float | None
 
+@dataclass(frozen=True)
+class VmecWoutMeta:
+    """VMEC metadata needed for REGCOIL plasma geometry options beyond 2/3.
+
+    This dataclass is intentionally numpy-only (no JAX) because it is used during
+    one-time preprocessing. Downstream geometry evaluation is done via FourierSurface.
+    """
+
+    nfp: int
+    lasym: bool
+    ns: int
+    mpol: int
+    ntor: int
+    xm: np.ndarray
+    xn: np.ndarray
+    lmns_last: np.ndarray | None
+
 def read_wout_boundary(path: str, *, radial_mode: str = "full") -> VmecBoundary:
     """
     Read the outer boundary Fourier representation from a VMEC wout_*.nc.
@@ -126,6 +143,56 @@ def read_wout_boundary(path: str, *, radial_mode: str = "full") -> VmecBoundary:
         ns=ns,
         Rmajor_p=Rmajor_p,
     )
+
+def read_wout_meta(path: str, *, need_lmns_last: bool = False) -> VmecWoutMeta:
+    """Read VMEC metadata (and optionally ``lmns`` on the outermost surface).
+
+    This helper exists primarily for REGCOIL plasma geometry_option_plasma=4, which
+    requires the VMEC lambda spectrum ``lmns`` (straight-field-line coordinate transform).
+    """
+    if netCDF4 is None:
+        raise ImportError("netCDF4 is required to read VMEC wout files.")
+    ds = netCDF4.Dataset(path, "r")
+    try:
+        nfp = int(ds.variables["nfp"][()])
+        lasym = bool(int(ds.variables["lasym__logical__"][()])) if "lasym__logical__" in ds.variables else bool(ds.variables["lasym"][()])
+        ns = int(ds.variables["ns"][()]) if "ns" in ds.variables else None
+        mpol = int(ds.variables["mpol"][()]) if "mpol" in ds.variables else None
+        ntor = int(ds.variables["ntor"][()]) if "ntor" in ds.variables else None
+        xm = np.array(ds.variables["xm"][()], dtype=int)
+        xn = np.array(ds.variables["xn"][()], dtype=int)
+
+        lmns_last = None
+        if need_lmns_last:
+            if "lmns" not in ds.variables:
+                raise ValueError("VMEC wout file is missing lmns, required for geometry_option_plasma=4.")
+            lmns_all = np.array(ds.variables["lmns"][()])
+            mnmax = int(xm.size)
+            if lmns_all.ndim != 2:
+                raise ValueError(f"Unexpected lmns array rank {lmns_all.ndim}, expected 2.")
+            if ns is None:
+                # Infer ns from lmns array.
+                ns = int(lmns_all.shape[0] if lmns_all.shape[1] == mnmax else lmns_all.shape[1])
+            if lmns_all.shape[0] == ns and lmns_all.shape[1] == mnmax:
+                lmns_last = lmns_all[-1, :].astype(float)
+            elif lmns_all.shape[0] == mnmax and lmns_all.shape[1] == ns:
+                lmns_last = lmns_all[:, -1].astype(float)
+            else:
+                raise ValueError(f"Could not infer lmns orientation: lmns.shape={lmns_all.shape} mnmax={mnmax} ns={ns}")
+        if ns is None or mpol is None or ntor is None:
+            raise ValueError("VMEC wout file missing required metadata ns/mpol/ntor.")
+        return VmecWoutMeta(
+            nfp=nfp,
+            lasym=lasym,
+            ns=int(ns),
+            mpol=int(mpol),
+            ntor=int(ntor),
+            xm=xm,
+            xn=xn,
+            lmns_last=lmns_last,
+        )
+    finally:
+        ds.close()
 
 
 def compute_curpol_and_G(obj):

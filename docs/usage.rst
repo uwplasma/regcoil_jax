@@ -18,6 +18,8 @@ commonly-used keys:
   - ``1``: analytic circular torus (``R0_plasma``, ``a_plasma``, ``nfp_imposed``)
   - ``2``: VMEC boundary (outermost full radial grid point)
   - ``3``: VMEC boundary (outermost half radial grid point, approximated by averaging the last two full-grid surfaces)
+  - ``4``: VMEC straight-field-line poloidal coordinate (requires ``wout_filename`` and uses ``mpol_transform_refinement`` / ``ntor_transform_refinement``)
+  - ``5``: EFIT gfile (requires ``efit_filename``, uses ``efit_num_modes`` and ``efit_psiN``; ``efit_psiN<1`` uses a coarse-grid interpolation approximation)
   - ``6``: Fourier coefficient table (``shape_filename_plasma``)
   - ``7``: FOCUS ``rdsurf`` boundary file (``shape_filename_plasma``; may embed Bn coefficients)
 
@@ -74,6 +76,11 @@ The `examples/1_simple/` tier includes small inputs that exercise the non-VMEC p
 
 - ``regcoil_in.plasma_option_6_fourier_table`` (``geometry_option_plasma=6``)
 - ``regcoil_in.plasma_option_7_focus_embedded_bnorm`` (``geometry_option_plasma=7`` with embedded Bn coefficients)
+
+The `examples/2_intermediate/` tier includes:
+
+- ``regcoil_in.plasma_option_4_vmec_straight_fieldline`` (``geometry_option_plasma=4``; VMEC straight-field-line coordinate)
+- ``regcoil_in.plasma_option_5_efit_lcfs`` (``geometry_option_plasma=5``; EFIT LCFS, ``efit_psiN=1.0``)
 
 Outputs
 -------

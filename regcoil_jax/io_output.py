@@ -119,7 +119,18 @@ def write_output_nc(
     # unless the Fortran initializer overwrites them).
     ds.createVariable("a_plasma", "f8")[...] = float(inputs.get("a_plasma", defaults["a_plasma"]))
     ds.createVariable("a_coil", "f8")[...] = float(inputs.get("a_coil", defaults["a_coil"]))
-    ds.createVariable("R0_plasma", "f8")[...] = float(mats.get("R0_plasma", inputs.get("r0_plasma", defaults["r0_plasma"])))
+    # For parity with regcoil_init_plasma_mod.f90:
+    #  - geometry_option_plasma=5 (EFIT) sets R0_plasma = rmnc_plasma(1)
+    gpl = int(inputs.get("geometry_option_plasma", 0))
+    R0_plasma = mats.get("R0_plasma", inputs.get("r0_plasma", defaults["r0_plasma"]))
+    if gpl == 5:
+        try:
+            rmnc_plasma = mats.get("rmnc_plasma", None)
+            if rmnc_plasma is not None:
+                R0_plasma = float(np.asarray(rmnc_plasma).reshape(-1)[0])
+        except Exception:
+            pass
+    ds.createVariable("R0_plasma", "f8")[...] = float(R0_plasma)
     ds.createVariable("R0_coil", "f8")[...] = float(inputs.get("r0_coil", defaults["r0_coil"]))
 
     ds.createVariable("mpol_potential", "i4")[...] = int(inputs.get("mpol_potential", mats.get("mpol_potential", defaults["mpol_potential"])))

@@ -86,7 +86,9 @@ python examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py
 - ✅ Supports `load_bnorm=.true.` (BNORM file) to include a nonzero `Bnormal_from_plasma_current`.
 - ✅ Supports `regularization_term_option` in `{ "chi2_K", "K_xy", "Laplace-Beltrami" }` (see `docs/theory.rst`).
 - ✅ Supports `general_option` in `{1,2,3,4,5}` (lambda scan, NESCOIL `nescout` diagnostics, truncated SVD scan, and lambda search).
-- ✅ Additional geometry options: plasma `geometry_option_plasma` in `{0,1,2,3,6,7}` and coil `geometry_option_coil` in `{0,1,2,3,4}`.
+- ✅ Additional geometry options: plasma `geometry_option_plasma` in `{0,1,2,3,4,5,6,7}` and coil `geometry_option_coil` in `{0,1,2,3,4}`.
+  - `geometry_option_plasma=4` (VMEC straight-field-line poloidal coordinate) is implemented in radians-consistent form; the Fortran reference in this workspace is known to fail for typical VMEC files due to an angle/units inconsistency.
+  - `geometry_option_plasma=5` (EFIT): strict netCDF parity is regression-tested for `efit_psiN=1.0` (LCFS); `efit_psiN<1` uses a coarse-grid interpolation approximation (documented).
 - ✅ Includes pytest regression tests (`tests/`) that run `regcoil_jax` and compare against stored Fortran outputs.
 - ✅ Includes a coil-cutting + VTK postprocessing example (`docs/visualization.rst`).
 - ✅ Supports per-coil currents in coil-cutting outputs (MAKECOIL file + VTK cell-data), and optional Poincaré-section outputs.

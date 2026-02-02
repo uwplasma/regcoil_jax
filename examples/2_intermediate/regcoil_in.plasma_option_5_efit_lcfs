@@ -1,0 +1,31 @@
+! EFIT (REGCOIL geometry_option_plasma=5) example.
+!
+! This uses a small synthetic EFIT gfile with a circular LCFS.
+! For parity testing and for a stable demo, we set efit_psiN = 1.0 (use the LCFS directly).
+
+&regcoil_nml
+  general_option = 1
+
+  nfp_imposed = 1
+  ntheta_plasma = 64
+  nzeta_plasma  = 16
+  ntheta_coil   = 64
+  nzeta_coil    = 16
+
+  mpol_potential = 10
+  ntor_potential = 0
+
+  geometry_option_plasma = 5
+  efit_filename = 'efit_circle.gfile'
+  efit_num_modes = 12
+  efit_psiN = 1.0
+
+  geometry_option_coil = 1
+  r0_coil = 2.2
+  a_coil  = 0.8
+
+  nlambda = 1
+  lambda_min = 1.0d-14
+  lambda_max = 1.0d-14
+/
+

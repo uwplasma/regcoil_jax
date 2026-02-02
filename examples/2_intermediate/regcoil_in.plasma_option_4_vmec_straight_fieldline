@@ -1,0 +1,32 @@
+! VMEC straight-field-line poloidal coordinate (REGCOIL geometry_option_plasma=4).
+!
+! This case is intentionally small-ish so it can be used as a quick regression test.
+
+&regcoil_nml
+  general_option = 1
+
+  ntheta_plasma = 48
+  nzeta_plasma  = 48
+  ntheta_coil   = 48
+  nzeta_coil    = 48
+
+  mpol_potential = 10
+  ntor_potential = 10
+
+  geometry_option_plasma = 4
+  wout_filename = '../3_advanced/wout_d23p4_tm.nc'
+  ! For geometry_option_plasma=4, REGCOIL increases Fourier resolution by default.
+  ! Keep this modest here to reduce runtime:
+  mpol_transform_refinement = 2
+  ntor_transform_refinement = 1
+
+  ! Use a simple torus coil surface for speed (no VMEC offset required):
+  geometry_option_coil = 1
+  r0_coil = 1.9
+  a_coil  = 0.6
+
+  nlambda = 1
+  lambda_min = 1.0d-14
+  lambda_max = 1.0d-14
+/
+

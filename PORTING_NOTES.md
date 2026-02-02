@@ -79,6 +79,15 @@ Root cause:
   - `general_option=5`: ported Brent-style lambda search (matches `regcoil_auto_regularization_solve.f90`)
   - Note: for strict netCDF parity, the port reproduces the Fortran edge-case `nlambda=2 => lambda(2)=NaN` from `regcoil_compute_lambda.f90`.
 
+## Plasma geometry options 4/5
+
+- **`geometry_option_plasma=4` (VMEC straight-field-line poloidal coordinate):** implemented in a radians-consistent form
+  (solve `theta_new = theta_old + lambda(theta_old, zeta)` using VMEC `lmns`, then Fourier-transform the resulting `R,Z` on a high-res grid).
+  The reference Fortran in this workspace can fail for typical VMEC files due to an angle/units inconsistency, so this option is smoke-tested
+  rather than netCDF parity-tested.
+- **`geometry_option_plasma=5` (EFIT):** parses EFIT gfiles and computes the axisymmetric Fourier series used by REGCOIL. Parity tests cover
+  `efit_psiN=1.0` (LCFS-only). For `efit_psiN<1`, regcoil_jax uses a coarse-grid bilinear interpolation approximation (documented in `docs/usage.rst`).
+
 ## Validate parity vs original REGCOIL (manual)
 
 Run the JAX port (paths will depend on which tier you pick):

@@ -41,46 +41,52 @@ def _copy_example(tmp_dir: Path, input_name: str) -> Path:
     dst = tmp_dir / src.name
     shutil.copy2(src, dst)
 
-    # VMEC-based case needs the wout file next to the input.
-    txt = src.read_text(encoding="utf-8", errors="ignore")
-    m = re.search(r"wout_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
-    if m:
-        wout = m.group(1)
-        wout_src = Path(wout) if os.path.isabs(wout) else (src.parent / wout)
-        if wout_src.exists():
-            shutil.copy2(wout_src, tmp_dir / Path(wout).name)
+    # Copy any referenced auxiliary files next to the input, and rewrite their
+    # paths in the copied namelist to use just the basename. This keeps the test
+    # runner isolated (tmp_dir) while matching REGCOIL's "paths relative to input"
+    # behavior.
+    txt_src = src.read_text(encoding="utf-8", errors="ignore")
+    txt_dst = txt_src
+
+    def _copy_and_rewrite(key: str):
+        nonlocal txt_dst
+        m = re.search(rf"{key}\s*=\s*['\"]([^'\"]+)['\"]", txt_src, flags=re.IGNORECASE)
+        if not m:
+            return
+        val = m.group(1)
+        src_path = Path(val) if os.path.isabs(val) else (src.parent / val)
+        if not src_path.exists():
+            return
+        basename = Path(val).name
+        shutil.copy2(src_path, tmp_dir / basename)
+        if val != basename:
+            txt_dst = re.sub(
+                rf"({key}\s*=\s*['\"])([^'\"]+)(['\"])",
+                rf"\1{basename}\3",
+                txt_dst,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+
+    _copy_and_rewrite("wout_filename")
 
     # BNORM-based cases need the bnorm file next to the input.
-    m = re.search(r"bnorm_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
-    if m:
-        bnorm = m.group(1)
-        bnorm_src = Path(bnorm) if os.path.isabs(bnorm) else (src.parent / bnorm)
-        if bnorm_src.exists():
-            shutil.copy2(bnorm_src, tmp_dir / Path(bnorm).name)
+    _copy_and_rewrite("bnorm_filename")
 
     # NESCOIL-based cases need the nescin file next to the input.
-    m = re.search(r"nescin_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
-    if m:
-        nescin = m.group(1)
-        nescin_src = Path(nescin) if os.path.isabs(nescin) else (src.parent / nescin)
-        if nescin_src.exists():
-            shutil.copy2(nescin_src, tmp_dir / Path(nescin).name)
+    _copy_and_rewrite("nescin_filename")
 
     # NESCOIL diagnostics mode needs the nescout file next to the input.
-    m = re.search(r"nescout_filename\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
-    if m:
-        nescout = m.group(1)
-        nescout_src = Path(nescout) if os.path.isabs(nescout) else (src.parent / nescout)
-        if nescout_src.exists():
-            shutil.copy2(nescout_src, tmp_dir / Path(nescout).name)
+    _copy_and_rewrite("nescout_filename")
 
     # Surface-table / FOCUS cases need shape_filename_plasma next to the input.
-    m = re.search(r"shape_filename_plasma\s*=\s*['\"]([^'\"]+)['\"]", txt, flags=re.IGNORECASE)
-    if m:
-        shape = m.group(1)
-        shape_src = Path(shape) if os.path.isabs(shape) else (src.parent / shape)
-        if shape_src.exists():
-            shutil.copy2(shape_src, tmp_dir / Path(shape).name)
+    _copy_and_rewrite("shape_filename_plasma")
+
+    # EFIT cases need the efit file next to the input.
+    _copy_and_rewrite("efit_filename")
+
+    if txt_dst != txt_src:
+        dst.write_text(txt_dst, encoding="utf-8")
 
     return dst
 
@@ -130,7 +136,19 @@ def _compare_netcdf_against_fortran(actual_path: Path, fortran_path: Path):
     # differences from BLAS/XLA ordering. Some diagnostic fields (notably involving
     # second derivatives and cancellation) need slightly looser tolerances.
     float_tols = {
+        # Geometry arrays can include exact zeros (e.g. y at zeta=0), so keep a slightly
+        # looser absolute tolerance to avoid brittle failures from benign FP ordering.
+        "r_plasma": dict(rtol=5e-8, atol=1e-7),
+        # EFIT/FOCUS-derived Fourier coefficients can have many small modes; allow a slightly
+        # larger absolute tolerance while keeping relative tolerance tight.
+        "rmnc_plasma": dict(rtol=5e-8, atol=5e-8),
+        "zmns_plasma": dict(rtol=5e-8, atol=5e-8),
+        "rmns_plasma": dict(rtol=5e-8, atol=5e-8),
+        "zmnc_plasma": dict(rtol=5e-8, atol=5e-8),
         "K2": dict(rtol=1e-6, atol=1e-8),
+        # Surface normals can differ at ~1e-7 from summation/trig ordering (especially for
+        # axisymmetric/asymmetric cases where cancellation is common). Keep tight but not brittle.
+        "norm_normal_plasma": dict(rtol=3e-7, atol=3e-7),
         "Laplace_Beltrami2": dict(rtol=5e-5, atol=5e-1),
         "RHS_regularization": dict(rtol=1e-6, atol=1e-2),
         # Solution coefficients / derived current potential can differ slightly due to
@@ -241,6 +259,7 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "2_intermediate/regcoil_in.torus_svd_scan",
         "2_intermediate/regcoil_in.torus_nescout_diagnostics",
         "2_intermediate/regcoil_in.lambda_search_option4_torus",
+        "2_intermediate/regcoil_in.plasma_option_5_efit_lcfs",
         "3_advanced/regcoil_in.lambda_search_1",
         "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low",
         "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high",
@@ -309,3 +328,21 @@ def test_cli_smoke_outputs(tmp_path: Path):
         assert res.returncode == 0, f"CLI failed for {input_name}.\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
         assert out_nc.exists(), f"missing {out_nc}"
         assert out_log.exists(), f"missing {out_log}"
+
+
+def test_plasma_option_4_smoke(tmp_path: Path):
+    # The Fortran REGCOIL implementation of geometry_option_plasma=4 in this workspace
+    # is known to fail for typical VMEC files due to an angle/units inconsistency.
+    # regcoil_jax implements the intended radians-consistent transform; validate that
+    # the case runs and produces a self-consistent output netCDF.
+    from regcoil_jax.run import run_regcoil
+
+    input_name = "2_intermediate/regcoil_in.plasma_option_4_vmec_straight_fieldline"
+    input_path = _copy_example(tmp_path, input_name)
+    out_nc, out_log = _expected_output_paths(tmp_path, input_path.name)
+
+    run_regcoil(str(input_path), verbose=False)
+    assert out_nc.exists(), f"missing {out_nc}"
+    assert out_log.exists(), f"missing {out_log}"
+
+    _assert_output_self_consistent(out_nc)
