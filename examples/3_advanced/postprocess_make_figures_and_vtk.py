@@ -56,6 +56,24 @@ def _read_var(ds, name: str) -> np.ndarray:
         raise KeyError(f"Missing variable {name!r} in {ds.filepath()}")
     return np.asarray(ds.variables[name][:])
 
+def _normals_from_r_zt3(*, r_zt3: np.ndarray, nfp: int) -> np.ndarray:
+    """Compute non-unit surface normals from a periodic (zeta,theta) grid of points.
+
+    This is used when `normal_plasma` is not present in the netCDF output (REGCOIL save_level=3).
+    """
+    r = np.asarray(r_zt3, dtype=float)
+    if r.ndim != 3 or r.shape[2] != 3:
+        raise ValueError(f"Expected r_zt3 shape (nzetal,ntheta,3), got {r.shape}")
+    nzetal, ntheta, _ = r.shape
+    # Uniform grids: theta spans [0,2π), zeta spans [0,2π) across all field periods.
+    dtheta = (2.0 * np.pi) / ntheta
+    dzeta = (2.0 * np.pi) / nzetal
+    dr_dtheta = (np.roll(r, -1, axis=1) - np.roll(r, 1, axis=1)) / (2.0 * dtheta)
+    dr_dzeta = (np.roll(r, -1, axis=0) - np.roll(r, 1, axis=0)) / (2.0 * dzeta)
+    # Match REGCOIL convention: normal = dr/dzeta × dr/dtheta (non-unit).
+    nvec = np.cross(dr_dzeta, dr_dtheta)
+    return nvec
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -149,7 +167,10 @@ def main():
 
     r_coil = _read_var(ds, "r_coil").astype(float)  # (nzetal,ntheta,3)
     r_plasma = _read_var(ds, "r_plasma").astype(float)  # (nzetal,ntheta,3)
-    normal_plasma = _read_var(ds, "normal_plasma").astype(float)  # (nzetal,ntheta,3)
+    if "normal_plasma" in ds.variables:
+        normal_plasma = _read_var(ds, "normal_plasma").astype(float)  # (nzetal,ntheta,3)
+    else:
+        normal_plasma = _normals_from_r_zt3(r_zt3=r_plasma, nfp=int(nfp))
 
     ds.close()
 

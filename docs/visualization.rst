@@ -2,7 +2,7 @@ Visualization and Coil Cutting
 ==============================
 
 Publication-ready figures
-------------------------
+------------------------------
 
 The repository includes a pedagogic postprocessing script that generates figures from a run:
 

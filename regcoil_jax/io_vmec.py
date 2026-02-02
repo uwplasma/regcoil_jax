@@ -22,6 +22,7 @@ class VmecBoundary:
     bvco: np.ndarray | None
     bsubvmnc: np.ndarray | None
     ns: int | None
+    Rmajor_p: float | None
 
 def read_wout_boundary(path: str, *, radial_mode: str = "full") -> VmecBoundary:
     """
@@ -108,6 +109,7 @@ def read_wout_boundary(path: str, *, radial_mode: str = "full") -> VmecBoundary:
 
     bvco = np.array(ds.variables["bvco"][()]) if "bvco" in ds.variables else None
     bsubvmnc = np.array(ds.variables["bsubvmnc"][()]) if "bsubvmnc" in ds.variables else None
+    Rmajor_p = float(ds.variables["Rmajor_p"][()]) if "Rmajor_p" in ds.variables else None
     ds.close()
 
     return VmecBoundary(
@@ -122,6 +124,7 @@ def read_wout_boundary(path: str, *, radial_mode: str = "full") -> VmecBoundary:
         bvco=bvco,
         bsubvmnc=bsubvmnc,
         ns=ns,
+        Rmajor_p=Rmajor_p,
     )
 
 

@@ -48,13 +48,19 @@ JAX-specific demo (autodiff through matrix build + linear solve):
 python examples/2_intermediate/jax_optimize_coil_radius_full_regcoil.py
 ```
 
+JAX-specific demo (autodiff through VMEC offset-surface geometry + matrix build + solve):
+
+```bash
+python examples/3_advanced/jax_optimize_separation_vmec_offset.py
+```
+
 ## Status
 - ✅ CLI runs the 3 example inputs above and writes `regcoil_out.*.nc` + `regcoil_out.*.log` next to the input file.
-- ✅ Key scalar arrays (`lambda`, `chi2_B`, `chi2_K`, `max_Bnormal`, `max_K`) match the reference Fortran REGCOIL outputs for these cases.
+- ✅ NetCDF output schema + values are regression-tested against committed Fortran reference `.nc` files (`tests/fortran_outputs/`) for a curated set of inputs.
 - ✅ Supports `load_bnorm=.true.` (BNORM file) to include a nonzero `Bnormal_from_plasma_current`.
 - ✅ Supports `regularization_term_option` in `{ "chi2_K", "K_xy", "Laplace-Beltrami" }` (see `docs/theory.rst`).
 - ✅ Additional geometry options: plasma `geometry_option_plasma` in `{0,1,2,3,6,7}` and coil `geometry_option_coil` in `{0,1,2,3,4}`.
-- ✅ Includes pytest regression tests (`tests/`) with stored Fortran baselines.
+- ✅ Includes pytest regression tests (`tests/`) that run `regcoil_jax` and compare against stored Fortran outputs.
 - ✅ Includes a coil-cutting + VTK postprocessing example (`docs/visualization.rst`).
 
 See `PORTING_NOTES.md` for details on what was fixed and how to validate parity.

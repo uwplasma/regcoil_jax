@@ -13,4 +13,9 @@ extensions = [
 templates_path = ["_templates"]
 exclude_patterns: list[str] = []
 
-html_theme = "sphinx_rtd_theme"
+try:
+    import sphinx_rtd_theme  # noqa: F401
+    html_theme = "sphinx_rtd_theme"
+except Exception:  # pragma: no cover
+    # Allow docs to build in minimal environments; CI installs the docs extra.
+    html_theme = "alabaster"

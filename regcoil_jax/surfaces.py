@@ -221,7 +221,8 @@ def coil_surface_from_inputs(inputs, plasma, vmec_boundary: FourierSurface | Non
     elif gopt_eff == 2:
         if vmec_boundary is None:
             raise ValueError("geometry_option_coil=2 requires plasma surface from VMEC.")
-        separation = float(inputs["separation"])
+        # Keep separation as a JAX value to allow autodiff-based winding-surface optimization.
+        separation = jnp.asarray(inputs["separation"], dtype=jnp.float64)
         s = vmec_boundary
 
         # Compute offset points in (x,y,z), then represent the resulting surface in the
@@ -315,7 +316,7 @@ def coil_surface_from_inputs(inputs, plasma, vmec_boundary: FourierSurface | Non
         # (REGCOIL geometry_option_coil=4).
         if vmec_boundary is None:
             raise ValueError("geometry_option_coil=4 requires plasma surface from VMEC.")
-        separation = float(inputs["separation"])
+        separation = jnp.asarray(inputs["separation"], dtype=jnp.float64)
         s = vmec_boundary
 
         theta_refinement = int(inputs.get("theta_arclength_refinement", 4))

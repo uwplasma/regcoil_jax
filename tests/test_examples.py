@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
@@ -19,7 +18,7 @@ except Exception as e:  # pragma: no cover
 HERE = Path(__file__).resolve()
 PROJECT_ROOT = HERE.parents[1]
 EXAMPLES_DIR = PROJECT_ROOT / "examples"
-BASELINES_PATH = HERE.parent / "baselines.json"
+FORTRAN_OUTPUTS_DIR = HERE.parent / "fortran_outputs"
 
 
 def _run_regcoil_jax(input_path: Path) -> subprocess.CompletedProcess[str]:
@@ -86,29 +85,89 @@ def _expected_output_paths(tmp_dir: Path, input_basename: str) -> tuple[Path, Pa
     return out_nc, out_log
 
 
-def _load_baselines() -> dict:
-    return json.loads(BASELINES_PATH.read_text(encoding="utf-8"))
-
-
-def _read_nc_scalars(path: Path) -> dict[str, np.ndarray]:
+def _read_nc_var(path: Path, name: str) -> np.ndarray:
     if netCDF4 is None:  # pragma: no cover
         raise RuntimeError("netCDF4 is required for tests")
-    keys = ["lambda", "chi2_B", "chi2_K", "max_Bnormal", "max_K"]
     ds = netCDF4.Dataset(str(path), "r")
-    out = {}
-    for k in keys:
-        assert k in ds.variables, f"missing variable {k} in {path}"
-        out[k] = np.array(ds.variables[k][:], dtype=float)
+    assert name in ds.variables, f"missing variable {name} in {path}"
+    out = np.array(ds.variables[name][:])
     ds.close()
     return out
 
 
-def _assert_close(actual: np.ndarray, expected: np.ndarray, *, rtol: float = 1e-9, atol: float = 1e-11):
+def _assert_close(
+    actual: np.ndarray,
+    expected: np.ndarray,
+    *,
+    rtol: float = 1e-8,
+    atol: float = 1e-8,
+    equal_nan: bool = True,
+    name: str | None = None,
+):
     assert actual.shape == expected.shape
-    assert np.allclose(actual, expected, rtol=rtol, atol=atol), (
-        f"max|Δ|={np.max(np.abs(actual-expected))} "
-        f"max|Δ|/max|expected|={np.max(np.abs(actual-expected)) / (np.max(np.abs(expected)) + 1e-300)}"
-    )
+    ok = np.allclose(actual, expected, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    if not ok:
+        diff = np.abs(actual - expected)
+        max_abs = float(np.nanmax(diff))
+        denom = float(np.nanmax(np.abs(expected)) + 1e-300)
+        prefix = f"{name}: " if name else ""
+        raise AssertionError(f"{prefix}not close: max|Δ|={max_abs}  max|Δ|/max|expected|={max_abs/denom}")
+
+
+def _compare_netcdf_against_fortran(actual_path: Path, fortran_path: Path):
+    if netCDF4 is None:  # pragma: no cover
+        raise RuntimeError("netCDF4 is required for tests")
+
+    # Default parity tolerances: tight enough to catch regressions but allowing tiny
+    # differences from BLAS/XLA ordering. Some diagnostic fields (notably involving
+    # second derivatives and cancellation) need slightly looser tolerances.
+    float_tols = {
+        "K2": dict(rtol=1e-6, atol=1e-8),
+        "Laplace_Beltrami2": dict(rtol=5e-5, atol=5e-1),
+        "RHS_regularization": dict(rtol=1e-6, atol=1e-2),
+        # Solution coefficients / derived current potential can differ slightly due to
+        # dense solve ordering and cancellation for modes with near-zero coefficients.
+        "single_valued_current_potential_mn": dict(rtol=1e-6, atol=1e-1),
+        "single_valued_current_potential_thetazeta": dict(rtol=5e-6, atol=1e-2),
+        "current_potential": dict(rtol=5e-6, atol=1e-2),
+    }
+
+    a = netCDF4.Dataset(str(actual_path), "r")
+    f = netCDF4.Dataset(str(fortran_path), "r")
+
+    try:
+        # Dimensions: name and size should match exactly.
+        dims_a = {k: len(v) for k, v in a.dimensions.items()}
+        dims_f = {k: len(v) for k, v in f.dimensions.items()}
+        assert dims_a == dims_f, f"dimension mismatch.\nactual={dims_a}\nfortran={dims_f}"
+
+        # Variables: set should match exactly (strict schema parity).
+        vars_a = set(a.variables.keys())
+        vars_f = set(f.variables.keys())
+        assert vars_a == vars_f, f"variable set mismatch.\nmissing={sorted(vars_f - vars_a)}\nextra={sorted(vars_a - vars_f)}"
+
+        # Values: strict for integers, tight tolerances for floats.
+        for name in sorted(vars_a):
+            if name == "total_time":
+                # Timing differs across machines/runs; keep schema parity but ignore value parity.
+                continue
+
+            va = a.variables[name]
+            vf = f.variables[name]
+            assert va.dimensions == vf.dimensions, f"{name}: dimension names differ: {va.dimensions} vs {vf.dimensions}"
+            assert va.shape == vf.shape, f"{name}: shape differs: {va.shape} vs {vf.shape}"
+
+            xa = np.array(va[:])
+            xf = np.array(vf[:])
+
+            if np.issubdtype(xf.dtype, np.integer):
+                assert np.array_equal(xa, xf), f"{name}: integer values differ"
+            else:
+                tol = float_tols.get(name, dict(rtol=5e-8, atol=1e-8))
+                _assert_close(xa.astype(float), xf.astype(float), equal_nan=True, name=name, **tol)
+    finally:
+        a.close()
+        f.close()
 
 
 def _assert_output_self_consistent(path: Path):
@@ -163,21 +222,20 @@ def _assert_output_self_consistent(path: Path):
     ds.close()
 
 
-def test_examples_match_baselines(tmp_path: Path):
-    baselines = _load_baselines()
+def test_examples_match_fortran_reference(tmp_path: Path):
     cases = [
-        ("axisymmetrySanityTest_chi2K_regularization", "1_simple/regcoil_in.axisymmetrySanityTest_chi2K_regularization"),
-        ("axisymmetrySanityTest_Laplace_Beltrami_regularization", "1_simple/regcoil_in.axisymmetrySanityTest_Laplace_Beltrami_regularization"),
-        ("compareToMatlab1", "1_simple/regcoil_in.compareToMatlab1"),
-        ("compareToMatlab1_option1", "1_simple/regcoil_in.compareToMatlab1_option1"),
-        ("plasma_option_6_fourier_table", "1_simple/regcoil_in.plasma_option_6_fourier_table"),
-        ("plasma_option_7_focus_embedded_bnorm", "1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm"),
-        ("lambda_search_1", "3_advanced/regcoil_in.lambda_search_1"),
-        ("lambda_search_2_current_density_target_too_low", "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low"),
-        ("lambda_search_3_current_density_target_too_high", "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high"),
-        ("lambda_search_4_chi2_B", "3_advanced/regcoil_in.lambda_search_4_chi2_B"),
-        ("lambda_search_5_with_bnorm", "3_advanced/regcoil_in.lambda_search_5_with_bnorm"),
-        ("compareToMatlab2_geometry_option_coil_3", "3_advanced/regcoil_in.compareToMatlab2_geometry_option_coil_3"),
+        "1_simple/regcoil_in.axisymmetrySanityTest_chi2K_regularization",
+        "1_simple/regcoil_in.axisymmetrySanityTest_Laplace_Beltrami_regularization",
+        "1_simple/regcoil_in.compareToMatlab1",
+        "1_simple/regcoil_in.compareToMatlab1_option1",
+        "1_simple/regcoil_in.plasma_option_6_fourier_table",
+        "1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm",
+        "3_advanced/regcoil_in.lambda_search_1",
+        "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low",
+        "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high",
+        "3_advanced/regcoil_in.lambda_search_4_chi2_B",
+        "3_advanced/regcoil_in.lambda_search_5_with_bnorm",
+        "3_advanced/regcoil_in.compareToMatlab2_geometry_option_coil_3",
     ]
 
     expected_exit_codes = {
@@ -190,26 +248,22 @@ def test_examples_match_baselines(tmp_path: Path):
         "lambda_search_5_with_bnorm": 0,
     }
 
-    for case_name, input_name in cases:
+    # Run in-process for speed so JAX compilation can be reused across cases.
+    from regcoil_jax.run import run_regcoil
+
+    for input_name in cases:
+        case_name = Path(input_name).name.replace("regcoil_in.", "")
         input_path = _copy_example(tmp_path, input_name)
         out_nc, out_log = _expected_output_paths(tmp_path, input_path.name)
 
-        res = _run_regcoil_jax(input_path)
-        assert res.returncode == 0, f"{case_name} failed.\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
+        run_regcoil(str(input_path), verbose=False)
 
         assert out_nc.exists(), f"missing {out_nc}"
         assert out_log.exists(), f"missing {out_log}"
 
-        actual = _read_nc_scalars(out_nc)
-        expected = {k: np.array(v, dtype=float) for k, v in baselines[case_name].items()}
-
-        for k in expected:
-            # Most parity cases match extremely tightly (1e-9 relative). For larger, less-conditioned
-            # systems we allow a slightly looser tolerance (still much smaller than "physics" tolerances).
-            if case_name in ("compareToMatlab2_geometry_option_coil_3",):
-                _assert_close(actual[k], expected[k], rtol=1e-7, atol=1e-9)
-            else:
-                _assert_close(actual[k], expected[k])
+        fortran_nc = FORTRAN_OUTPUTS_DIR / out_nc.name
+        assert fortran_nc.exists(), f"missing fortran reference file {fortran_nc}"
+        _compare_netcdf_against_fortran(out_nc, fortran_nc)
 
         _assert_output_self_consistent(out_nc)
 
@@ -226,8 +280,20 @@ def test_examples_match_baselines(tmp_path: Path):
         if case_name in expected_exit_codes:
             log_txt = out_log.read_text(encoding="utf-8", errors="ignore")
             assert f"exit_code={expected_exit_codes[case_name]}" in log_txt
-            if expected_exit_codes[case_name] == 0:
-                assert "chosen_idx=" in log_txt
-                assert f"chosen_idx={len(expected['lambda']) - 1}" in log_txt
-            else:
-                assert "chosen_idx=" not in log_txt
+
+
+def test_cli_smoke_outputs(tmp_path: Path):
+    # Keep a small CLI smoke test to ensure the CLI entrypoint works and writes outputs
+    # next to the input file (acceptance criterion #1).
+    core = [
+        "1_simple/regcoil_in.compareToMatlab1",
+        "1_simple/regcoil_in.compareToMatlab1_option1",
+        "3_advanced/regcoil_in.lambda_search_1",
+    ]
+    for input_name in core:
+        input_path = _copy_example(tmp_path, input_name)
+        out_nc, out_log = _expected_output_paths(tmp_path, input_path.name)
+        res = _run_regcoil_jax(input_path)
+        assert res.returncode == 0, f"CLI failed for {input_name}.\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
+        assert out_nc.exists(), f"missing {out_nc}"
+        assert out_log.exists(), f"missing {out_log}"

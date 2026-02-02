@@ -8,6 +8,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+docs/_build/
 
 # REGCOIL outputs
 examples/**/regcoil_out*.nc

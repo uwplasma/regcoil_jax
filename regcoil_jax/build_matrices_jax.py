@@ -211,14 +211,29 @@ def build_matrices(inputs, plasma, coil):
     area_plasma = nfp * dth_p * dze_p * jnp.sum(plasma["normN"])
     area_coil = nfp * dth_c * dze_c * jnp.sum(coil["normN"])
 
-    # Volumes (for output parity; Fortran uses an R^2 dZ formula).
-    # Use divergence theorem: V = (1/3) ∫ r · n dS = (1/3) ∫ r · (n_unit |N|) dθ dζ
-    # Take abs() to guard against normal orientation conventions.
-    vol_plasma = jnp.abs((nfp * dth_p * dze_p / 3.0) * jnp.sum(jnp.sum(plasma["r"] * plasma["nunit"], axis=0) * plasma["normN"]))
-    vol_coil = jnp.abs((nfp * dth_c * dze_c / 3.0) * jnp.sum(jnp.sum(coil["r"] * coil["nunit"], axis=0) * coil["normN"]))
+    # Volumes (for output parity): match REGCOIL Fortran formula used in
+    # regcoil_init_plasma_mod.f90 and regcoil_evaluate_coil_surface.f90:
+    #   V = | ∫ (1/2) R^2 dZ dζ |
+    # evaluated on the half-theta grid (R^2 interpolated from the full to half grid).
+    def _volume_r2_dz(r3tz: jnp.ndarray, dze: float, nfp: int) -> jnp.ndarray:
+        r3tz = jnp.asarray(r3tz)  # (3,ntheta,nzeta) for a single field period in zeta
+        R2 = r3tz[0] * r3tz[0] + r3tz[1] * r3tz[1]  # (T,Z)
+        Z = r3tz[2]  # (T,Z)
+        # Interior theta segments:
+        R2_half = 0.5 * (R2[:-1, :] + R2[1:, :])
+        dZ = Z[1:, :] - Z[:-1, :]
+        acc = jnp.sum(R2_half * dZ)
+        # End segment (theta wraps around):
+        acc = acc + jnp.sum(0.5 * (R2[0, :] + R2[-1, :]) * (Z[0, :] - Z[-1, :]))
+        # r includes only one field period; multiply by nfp to match Fortran's nzetal accumulation.
+        return jnp.abs((nfp * acc) * dze / 2.0)
+
+    vol_plasma = _volume_r2_dz(plasma["r"], dze_p, nfp)
+    vol_coil = _volume_r2_dz(coil["r"], dze_c, nfp)
 
     out = dict(
         nfp=nfp,
+        lasym=bool(plasma.get("lasym", False) or coil.get("lasym", False)),
         # Metadata scalars (match regcoil_write_output.f90 naming where possible)
         mpol_potential=int(mpol_pot),
         ntor_potential=int(ntor_pot),

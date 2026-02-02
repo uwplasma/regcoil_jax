@@ -50,6 +50,15 @@ Examples
 
 See `examples/README.md` for the tiered examples layout (`1_simple/`, `2_intermediate/`, `3_advanced/`).
 
+Autodiff / Optimization demos
+-----------------------------
+
+Two examples highlight “JAX-native” workflows:
+
+- `examples/2_intermediate/jax_optimize_coil_minor_radius.py`: differentiable toy optimization (fast).
+- `examples/3_advanced/jax_optimize_separation_vmec_offset.py`: optimizes the VMEC offset-surface ``separation`` parameter
+  by differentiating through surface construction, matrix build, and the linear solve.
+
 Geometry-option examples
 ------------------------
 

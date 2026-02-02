@@ -47,6 +47,7 @@ def main():
     from .build_matrices_jax import build_matrices
     from .solve_jax import lambda_grid, solve_for_lambdas, diagnostics, choose_lambda, auto_regularization_solve
     from .io_output import write_output_nc
+    import time as _time
 
     def _as_fourier_surface(bound) -> FourierSurface:
         # io_vmec returns numpy arrays; convert to jnp
@@ -119,6 +120,9 @@ def main():
             inputs["net_poloidal_current_amperes"] = float(G)
         if gpl in (2, 3, 4) and curpol is not None:
             inputs["curpol"] = float(curpol)
+        # Match regcoil_init_plasma_mod.f90: overwrite R0_plasma with VMEC's major radius (Rmajor).
+        if gpl in (2, 3, 4) and getattr(bound, "Rmajor_p", None) is not None:
+            inputs["r0_plasma"] = float(bound.Rmajor_p)
         vmec_surface = _as_fourier_surface(bound)
 
     
@@ -186,6 +190,8 @@ def main():
         except Exception as e:
             print(f"[regcoil_jax] debug_dir: could not dump surface shapes: {e}")
 
+    t0_total = _time.time()
+
     # Matrices
     print("[regcoil_jax] building matrices (this may take a bit the first time due to JIT)...")
     mats = build_matrices(inputs, plasma, coil)
@@ -194,6 +200,26 @@ def main():
     general_option = int(inputs.get("general_option", 1))
     if general_option == 5:
         lambdas, sols, chi2_B, chi2_K, max_B, max_K, idx, exit_code = auto_regularization_solve(inputs, mats)
+        # For output parity: if the chosen target option is max_K_lse or lp_norm_K, also store
+        # the per-lambda diagnostic arrays with the Fortran variable names.
+        target_option = str(inputs.get("target_option", "max_K")).strip()
+        if target_option in ("max_K_lse", "lp_norm_K"):
+            from .solve_jax import target_quantity
+            vals = []
+            for j in range(int(len(lambdas))):
+                vals.append(
+                    target_quantity(
+                        mats,
+                        sol=sols[j],
+                        chi2_B=chi2_B[j],
+                        chi2_K=chi2_K[j],
+                        max_B=max_B[j],
+                        max_K=max_K[j],
+                        target_option=target_option,
+                        target_option_p=float(inputs.get("target_option_p", 4.0)),
+                    )
+                )
+            mats[target_option] = jnp.asarray(vals)
     else:
         lambdas = lambda_grid(inputs)
         sols = solve_for_lambdas(mats, lambdas)
@@ -213,6 +239,7 @@ def main():
 
     # Output filename like Fortran
     out_path = os.path.join(input_dir, "regcoil_out" + base[10:] + ".nc")
+    t1_total = _time.time()
     write_output_nc(
         out_path,
         inputs,
@@ -223,8 +250,8 @@ def main():
         chi2_K,
         max_B,
         max_K,
-        chosen_idx=idx,
         exit_code=exit_code,
+        total_time=float(t1_total - t0_total),
     )
     print(f"[regcoil_jax] wrote: {out_path}")
 
