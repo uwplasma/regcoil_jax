@@ -182,12 +182,12 @@ def main():
 
         # Lambda scan
         fig, ax = plt.subplots(figsize=(6.5, 4.5))
-        ax.semilogx(lambdas, max_K, "-o", label=r"$\\max |K|$")
+        ax.semilogx(lambdas, max_K, "-o", label=r"$\max |K|$")
         ax2 = ax.twinx()
-        ax2.semilogx(lambdas, max_B, "-s", color="C1", label=r"$\\max |B_n|$")
-        ax.set_xlabel(r"$\\lambda$")
-        ax.set_ylabel(r"$\\max |K|$")
-        ax2.set_ylabel(r"$\\max |B_n|$")
+        ax2.semilogx(lambdas, max_B, "-s", color="C1", label=r"$\max |B_n|$")
+        ax.set_xlabel(r"$\lambda$")
+        ax.set_ylabel(r"$\max |K|$")
+        ax2.set_ylabel(r"$\max |B_n|$")
         ax.axvline(lambdas[ilam], color="k", alpha=0.3, linestyle="--", linewidth=1)
         ax.set_title(f"Lambda scan ({case})")
         # Combined legend
@@ -202,8 +202,8 @@ def main():
         fig, ax = plt.subplots(figsize=(6.5, 4.5))
         im = ax.pcolormesh(zeta_p, theta_p, Btot[ilam].T, shading="auto")
         fig.colorbar(im, ax=ax, label=r"$B_n$")
-        ax.set_xlabel(r"$\\zeta$")
-        ax.set_ylabel(r"$\\theta$")
+        ax.set_xlabel(r"$\zeta$")
+        ax.set_ylabel(r"$\theta$")
         ax.set_title(f"$B_n$ on plasma (lambda idx {ilam})")
         fig.tight_layout()
         fig.savefig(fig_dir / "Bnormal_plasma.png")
@@ -214,8 +214,8 @@ def main():
         Kmag = np.sqrt(K2[ilam])
         im = ax.pcolormesh(zeta_c, theta_c, Kmag.T, shading="auto")
         fig.colorbar(im, ax=ax, label=r"$|K|$")
-        ax.set_xlabel(r"$\\zeta$")
-        ax.set_ylabel(r"$\\theta$")
+        ax.set_xlabel(r"$\zeta$")
+        ax.set_ylabel(r"$\theta$")
         ax.set_title(f"$|K|$ on coil (lambda idx {ilam})")
         fig.tight_layout()
         fig.savefig(fig_dir / "K_coil.png")
@@ -224,7 +224,7 @@ def main():
         # Current potential + contours used for coil cutting
         fig, ax = plt.subplots(figsize=(6.5, 4.5))
         im = ax.pcolormesh(zeta_c, theta_c, Phi[ilam].T, shading="auto")
-        fig.colorbar(im, ax=ax, label=r"$\\Phi$ [A]")
+        fig.colorbar(im, ax=ax, label=r"$\Phi$ [A]")
         # Overlay the contour levels used for coil cutting (for pedagogy).
         try:
             data = Phi[ilam].copy()
@@ -236,8 +236,8 @@ def main():
             ax.contour(zeta_c, theta_c, data.T, levels=levels, colors="k", linewidths=0.6, alpha=0.6)
         except Exception:
             pass
-        ax.set_xlabel(r"$\\zeta$")
-        ax.set_ylabel(r"$\\theta$")
+        ax.set_xlabel(r"$\zeta$")
+        ax.set_ylabel(r"$\theta$")
         ax.set_title(f"Current potential on coil (lambda idx {ilam})")
         fig.tight_layout()
         fig.savefig(fig_dir / "current_potential.png")

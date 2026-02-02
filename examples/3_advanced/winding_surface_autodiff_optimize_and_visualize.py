@@ -89,7 +89,7 @@ def _write_regcoil_input(
 
 
 def _run(cmd: list[str], *, cwd: Path):
-    print("[run]", " ".join(cmd))
+    print("[run]", " ".join(cmd), flush=True)
     subprocess.run(cmd, cwd=str(cwd), check=True)
 
 
@@ -138,6 +138,9 @@ def main() -> None:
 
     args = ap.parse_args()
 
+    # Enable x64 for the in-process autodiff optimization (parity + stability).
+    os.environ.setdefault("JAX_ENABLE_X64", "True")
+
     wout_src = Path(args.wout).resolve()
     if not wout_src.exists():
         raise SystemExit(f"Missing wout file: {wout_src}")
@@ -166,7 +169,7 @@ def main() -> None:
         separation_min=float(args.separation_min),
     )
 
-    print("[opt] optimizing sep(θ,ζ) ...")
+    print("[opt] optimizing sep(θ,ζ) ...", flush=True)
     res = optimize_vmec_offset_separation_field(
         wout_filename=str(wout_dst),
         separation0=float(args.separation0),
@@ -288,9 +291,9 @@ def main() -> None:
         ax2 = ax.twinx()
         ax2.semilogx(A["lambda"], A["max_Bnormal"], "--s", ms=3, color="C2", label="before: max|B_n|")
         ax2.semilogx(B["lambda"], B["max_Bnormal"], "--s", ms=3, color="C3", label="after:  max|B_n|")
-        ax.set_xlabel(r"$\\lambda$")
-        ax.set_ylabel(r"$\\max |K|$")
-        ax2.set_ylabel(r"$\\max |B_n|$")
+        ax.set_xlabel(r"$\lambda$")
+        ax.set_ylabel(r"$\max |K|$")
+        ax2.set_ylabel(r"$\max |B_n|$")
         h1, l1 = ax.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         ax.legend(h1 + h2, l1 + l2, loc="best")
@@ -310,4 +313,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

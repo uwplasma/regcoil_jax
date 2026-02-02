@@ -1,4 +1,5 @@
 from __future__ import annotations
+import functools
 import jax
 import jax.numpy as jnp
 from .constants import mu0, pi
@@ -19,7 +20,7 @@ def rotate_z(vec3, phi):
         yr = s*x + c*y
         return jnp.stack([xr, yr, z], axis=-1)
 
-@jax.jit
+@functools.partial(jax.jit, static_argnames=("nfp",))
 def inductance_and_h_sum(plasma_r, plasma_n, coil_r, coil_n, coil_f, nfp: int):
     """Compute effective inductance kernel (summed over nfp images) and the h field.
 
