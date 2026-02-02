@@ -219,7 +219,7 @@ def run_regcoil(
         lambdas, sols, chi2_B, chi2_K, max_B, max_K = svd_scan(mats)
         idx = None
         exit_code = 0
-    elif general_option == 5:
+    elif general_option in (4, 5):
         lambdas, sols, chi2_B, chi2_K, max_B, max_K, idx, exit_code = auto_regularization_solve(inputs, mats)
         target_option = str(inputs.get("target_option", "max_K")).strip()
         if target_option in ("max_K_lse", "lp_norm_K"):
@@ -269,7 +269,7 @@ def run_regcoil(
             f.write(f"input={input_path_abs}\n")
             f.write(f"nbasis={int(mats['matrix_B'].shape[0])}\n")
             f.write(f"lambdas=[{float(lambdas[0]):.6e}, {float(lambdas[-1]):.6e}] n={len(lambdas)}\n")
-            if general_option == 5:
+            if general_option in (4, 5):
                 f.write(f"target_option={str(inputs.get('target_option', 'max_K')).strip()}\n")
                 f.write(f"target_value={float(inputs.get('target_value', 0.0)):.16e}\n")
                 f.write(f"target_option_p={float(inputs.get('target_option_p', 4.0)):.16e}\n")

@@ -251,7 +251,10 @@ def auto_regularization_solve(inputs, mats):
     targeted_quantity_increases = target_increases_with_lambda()
 
     # Stage machine (see Fortran):
-    stage = 10
+    #   general_option=4 starts at stage=1 (no feasibility checks)
+    #   general_option=5 starts at stage=10 (evaluate λ=∞ and λ=0 first)
+    general = int(inputs.get("general_option", 5))
+    stage = 1 if general == 4 else 10
     exit_code = -1
 
     # Brendt (Brent) state in log(lambda) space:

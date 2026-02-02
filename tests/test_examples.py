@@ -240,6 +240,7 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm",
         "2_intermediate/regcoil_in.torus_svd_scan",
         "2_intermediate/regcoil_in.torus_nescout_diagnostics",
+        "2_intermediate/regcoil_in.lambda_search_option4_torus",
         "3_advanced/regcoil_in.lambda_search_1",
         "3_advanced/regcoil_in.lambda_search_2_current_density_target_too_low",
         "3_advanced/regcoil_in.lambda_search_3_current_density_target_too_high",
@@ -256,6 +257,7 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "lambda_search_3_current_density_target_too_high": -3,
         "lambda_search_4_chi2_B": 0,
         "lambda_search_5_with_bnorm": 0,
+        "lambda_search_option4_torus": 0,
     }
 
     # Run in-process for speed so JAX compilation can be reused across cases.

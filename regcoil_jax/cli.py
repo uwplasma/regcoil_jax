@@ -226,7 +226,7 @@ def main():
         lambdas, sols, chi2_B, chi2_K, max_B, max_K = svd_scan(mats)
         idx = None
         exit_code = 0
-    elif general_option == 5:
+    elif general_option in (4, 5):
         lambdas, sols, chi2_B, chi2_K, max_B, max_K, idx, exit_code = auto_regularization_solve(inputs, mats)
         # For output parity: if the chosen target option is max_K_lse or lp_norm_K, also store
         # the per-lambda diagnostic arrays with the Fortran variable names.
@@ -256,14 +256,14 @@ def main():
         exit_code = 0
 
     print(f"[regcoil_jax] lambdas: [{float(lambdas[0]):.3e} .. {float(lambdas[-1]):.3e}]  n={len(lambdas)}")
-    if general_option == 5 and exit_code != 0:
+    if general_option in (4, 5) and exit_code != 0:
         # Match REGCOIL's conventions (see regcoil_auto_regularization_solve.f90)
         msg = { -1: "lambda search did not converge",
                 -2: "target_value not achievable (too low)",
                 -3: "target_value not achievable (too high)"}.get(int(exit_code), f"exit_code={int(exit_code)}")
-        print(f"[regcoil_jax] general_option=5: {msg}")
+        print(f"[regcoil_jax] general_option={general_option}: {msg}")
     if idx is not None:
-        print(f"[regcoil_jax] general_option=5 target -> picked jlambda={idx}  lambda={float(lambdas[idx]):.6e}")
+        print(f"[regcoil_jax] general_option={general_option} target -> picked jlambda={idx}  lambda={float(lambdas[idx]):.6e}")
 
     # Output filename like Fortran
     out_path = os.path.join(input_dir, "regcoil_out" + base[10:] + ".nc")
@@ -290,7 +290,7 @@ def main():
             f.write(f"input={input_path_abs}\n")
             f.write(f"nbasis={int(mats['matrix_B'].shape[0])}\n")
             f.write(f"lambdas=[{float(lambdas[0]):.6e}, {float(lambdas[-1]):.6e}] n={len(lambdas)}\n")
-            if general_option == 5:
+            if general_option in (4, 5):
                 f.write(f"target_option={str(inputs.get('target_option', 'max_K')).strip()}\n")
                 f.write(f"target_value={float(inputs.get('target_value', 0.0)):.16e}\n")
                 f.write(f"target_option_p={float(inputs.get('target_option_p', 4.0)):.16e}\n")

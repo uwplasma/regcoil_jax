@@ -36,8 +36,8 @@ commonly-used keys:
 Lambda search targets
 ---------------------
 
-For ``general_option=5``, REGCOIL searches for a ``lambda`` such that a chosen diagnostic hits ``target_value``.
-This port supports the same target options as the Fortran code:
+For ``general_option=4`` or ``general_option=5``, REGCOIL searches for a ``lambda`` such that a chosen diagnostic hits
+``target_value``. This port supports the same target options as the Fortran code:
 
 - ``target_option = "max_K"`` (default)
 - ``target_option = "rms_K"``

@@ -1,0 +1,40 @@
+! Intermediate example: REGCOIL lambda search without feasibility checks (general_option=4).
+!
+! Run:
+!   regcoil_jax --platform cpu --verbose examples/2_intermediate/regcoil_in.lambda_search_option4_torus
+!
+! Optional figures/VTK (including coil cutting) via the shared postprocess script:
+!   python examples/3_advanced/postprocess_make_figures_and_vtk.py --run --input examples/2_intermediate/regcoil_in.lambda_search_option4_torus
+
+&regcoil_nml
+  general_option = 4
+
+  target_option = "max_K"
+  target_value = 0.18
+
+  nlambda = 18
+
+  ntheta_plasma = 36
+  nzeta_plasma  = 36
+  ntheta_coil   = 36
+  nzeta_coil    = 36
+
+  mpol_potential = 6
+  ntor_potential = 6
+
+  geometry_option_plasma = 1
+  R0_plasma = 3.0
+  a_plasma = 1.0
+  nfp_imposed = 1
+
+  geometry_option_coil = 1
+  R0_coil = 3.0
+  a_coil = 1.7
+
+  net_poloidal_current_amperes = 1.4
+  net_toroidal_current_amperes = 0.3
+
+  symmetry_option = 1
+  regularization_term_option = "chi2_K"
+/
+

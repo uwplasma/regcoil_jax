@@ -61,7 +61,7 @@ python examples/3_advanced/jax_optimize_separation_vmec_offset.py
 - ✅ NetCDF output schema + values are regression-tested against committed Fortran reference `.nc` files (`tests/fortran_outputs/`) for a curated set of inputs.
 - ✅ Supports `load_bnorm=.true.` (BNORM file) to include a nonzero `Bnormal_from_plasma_current`.
 - ✅ Supports `regularization_term_option` in `{ "chi2_K", "K_xy", "Laplace-Beltrami" }` (see `docs/theory.rst`).
-- ✅ Supports `general_option` in `{1,2,3,5}` (lambda scan, NESCOIL `nescout` diagnostics, truncated SVD scan, and lambda search).
+- ✅ Supports `general_option` in `{1,2,3,4,5}` (lambda scan, NESCOIL `nescout` diagnostics, truncated SVD scan, and lambda search).
 - ✅ Additional geometry options: plasma `geometry_option_plasma` in `{0,1,2,3,6,7}` and coil `geometry_option_coil` in `{0,1,2,3,4}`.
 - ✅ Includes pytest regression tests (`tests/`) that run `regcoil_jax` and compare against stored Fortran outputs.
 - ✅ Includes a coil-cutting + VTK postprocessing example (`docs/visualization.rst`).
