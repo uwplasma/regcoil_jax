@@ -8,8 +8,8 @@ for their moments to cancel the normal field on the plasma surface.*
 
 The key implementation modules are:
 
-* ``regcoil_jax.dipoles``: point-dipole magnetic field and B·n evaluation (batched, JAX).
-* ``regcoil_jax.permanent_magnets``: least-squares and fixed-magnitude optimization utilities.
+* :src:`regcoil_jax/dipoles.py`: point-dipole magnetic field and B·n evaluation (batched, JAX).
+* :src:`regcoil_jax/permanent_magnets.py`: least-squares and fixed-magnitude optimization utilities.
 
 Dipole model
 ------------
@@ -29,8 +29,7 @@ A point dipole at position :math:`\mathbf{x}_0` with moment :math:`\mathbf{m}` p
 The normal component at a surface point with unit normal :math:`\hat{\mathbf{n}}` is
 :math:`B_n = \hat{\mathbf{n}}\cdot\mathbf{B}`.
 
-Implementation: ``regcoil_jax.dipoles.dipole_bfield`` and
-``regcoil_jax.dipoles.dipole_bnormal``.
+Implementation: :src:`regcoil_jax/dipoles.py` (``dipole_bfield``, ``dipole_bnormal``).
 
 Ridge-regularized least squares (linear solve)
 ----------------------------------------------
@@ -56,7 +55,7 @@ which leads to the normal equations
 
   (A^\top A + \alpha I)\,m = A^\top b.
 
-Implementation: ``regcoil_jax.permanent_magnets.solve_dipole_moments_ridge_cg``.
+Implementation: :src:`regcoil_jax/permanent_magnets.py` (``solve_dipole_moments_ridge_cg``).
 
 Notes:
 
@@ -76,7 +75,7 @@ This constraint is non-linear. We provide a smooth, differentiable relaxation by
 
 and optimizing the unconstrained :math:`\mathbf{v}_i` with gradient descent / Adam.
 
-Implementation: ``regcoil_jax.permanent_magnets.optimize_dipole_orientations_fixed_magnitude``.
+Implementation: :src:`regcoil_jax/permanent_magnets.py` (``optimize_dipole_orientations_fixed_magnitude``).
 
 Example
 -------
@@ -93,3 +92,53 @@ This script:
 2. places dipoles on an offset winding surface,
 3. solves for dipole moments to cancel :math:`B_{\mathrm{plasma}}\cdot n`,
 4. writes figures and ParaView VTK outputs.
+
+Typical “paper-style” outputs
+-----------------------------
+
+The example produces a three-panel map of:
+
+- :math:`B_{\mathrm{plasma}}\cdot n` (before),
+- :math:`B_{\mathrm{PM}}\cdot n` (from magnets),
+- the residual :math:`B_{\mathrm{plasma}}\cdot n + B_{\mathrm{PM}}\cdot n` (after),
+
+as well as histogram/scatter diagnostics of the resulting dipole moment distribution.
+
+.. figure:: _static/permanent_magnets_bn_before_after_residual.png
+   :alt: Permanent magnets: before/after/residual B·n maps
+   :width: 900
+
+.. figure:: _static/permanent_magnets_dipole_magnitude_scatter.png
+   :alt: Permanent magnets: dipole placement colored by moment magnitude
+   :width: 650
+
+.. figure:: _static/permanent_magnets_moment_magnitude_hist.png
+   :alt: Permanent magnets: histogram of dipole moment magnitudes
+   :width: 650
+
+ParaView assets
+----------------
+
+The example writes:
+
+- ``vtk/plasma_surface.vts`` with point-data ``Bn_plasma``, ``Bn_pm``, and ``Bn_residual``.
+- ``vtk/winding_surface.vts`` for reference.
+- ``vtk/dipoles.vtp`` as a point set with vector point-data ``m`` and scalars ``m_mag`` and ``m_dot_ncoil``.
+
+In ParaView:
+
+- load the surfaces and color by ``Bn_residual``,
+- load ``dipoles.vtp`` and use *Filters → Glyph* with vector ``m`` to visualize magnet orientations,
+- color glyphs by ``m_mag`` to show the moment distribution.
+
+Reproducibility metadata
+------------------------
+
+The example also writes ``run_summary.json`` in the output directory, containing the key parameters
+(dipole stride/offset, ridge weight, iteration limits) and simple residual metrics (RMS and max :math:`|B_n|`).
+
+See also
+--------
+
+- :ex:`examples/3_advanced/permanent_magnets_cancel_bplasma.py` (full script)
+- :doc:`references` for permanent-magnet and coillet literature pointers.

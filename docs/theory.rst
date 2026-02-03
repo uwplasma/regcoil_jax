@@ -17,15 +17,19 @@ are expanded as
 
 .. math::
 
-   R(\theta,\zeta) &= \sum_{m,n} \Big( R_{m,n}^{c}\cos(m\theta-n\zeta) + R_{m,n}^{s}\sin(m\theta-n\zeta) \Big) \\
-   Z(\theta,\zeta) &= \sum_{m,n} \Big( Z_{m,n}^{s}\sin(m\theta-n\zeta) + Z_{m,n}^{c}\cos(m\theta-n\zeta) \Big)
+   \begin{aligned}
+   R(\theta,\zeta) &= \sum_{m,n} \Big( R_{m,n}^{c}\cos(m\theta-n\zeta) + R_{m,n}^{s}\sin(m\theta-n\zeta) \Big), \\
+   Z(\theta,\zeta) &= \sum_{m,n} \Big( Z_{m,n}^{s}\sin(m\theta-n\zeta) + Z_{m,n}^{c}\cos(m\theta-n\zeta) \Big).
+   \end{aligned}
 
 The Cartesian position is
 
 .. math::
 
-   \phi &= \zeta \\
-   \mathbf{r}(\theta,\zeta) &= (R\cos\phi,\; R\sin\phi,\; Z)
+   \begin{aligned}
+   \phi &= \zeta, \\
+   \mathbf{r}(\theta,\zeta) &= (R\cos\phi,\; R\sin\phi,\; Z).
+   \end{aligned}
 
 Surface tangents and normals
 ----------------------------
@@ -48,8 +52,8 @@ and the (non-unit) normal vector using the REGCOIL convention
 Code mapping
 ~~~~~~~~~~~~
 
-- Fourier surfaces and analytic derivatives: ``regcoil_jax/geometry_fourier.py`` (``FourierSurface``, ``eval_surface_xyz_and_derivs2``)
-- Metric tensors and normals: ``regcoil_jax/surface_metrics.py`` (``metrics_and_normals``)
+- Fourier surfaces and analytic derivatives: :src:`regcoil_jax/geometry_fourier.py` (``FourierSurface``, ``eval_surface_xyz_and_derivs2``)
+- Metric tensors and normals: :src:`regcoil_jax/surface_metrics.py` (``metrics_and_normals``)
 
 Current potential basis
 -----------------------
@@ -72,16 +76,18 @@ The derivatives used throughout are
 
 .. math::
 
-   \frac{\partial}{\partial\theta}\sin(m\theta-n\zeta) &= m\cos(m\theta-n\zeta) \\
-   \frac{\partial}{\partial\zeta}\sin(m\theta-n\zeta) &= -n\cos(m\theta-n\zeta) \\
-   \frac{\partial}{\partial\theta}\cos(m\theta-n\zeta) &= -m\sin(m\theta-n\zeta) \\
-   \frac{\partial}{\partial\zeta}\cos(m\theta-n\zeta) &= n\sin(m\theta-n\zeta)
+   \begin{aligned}
+   \frac{\partial}{\partial\theta}\sin(m\theta-n\zeta) &= m\cos(m\theta-n\zeta), \\
+   \frac{\partial}{\partial\zeta}\sin(m\theta-n\zeta) &= -n\cos(m\theta-n\zeta), \\
+   \frac{\partial}{\partial\theta}\cos(m\theta-n\zeta) &= -m\sin(m\theta-n\zeta), \\
+   \frac{\partial}{\partial\zeta}\cos(m\theta-n\zeta) &= n\sin(m\theta-n\zeta).
+   \end{aligned}
 
 Code mapping
 ~~~~~~~~~~~~
 
-- Fourier mode ordering: ``regcoil_jax/modes.py`` (``init_fourier_modes``)
-- Basis + derivative operators: ``regcoil_jax/build_basis.py`` (``build_basis_and_f``)
+- Fourier mode ordering: :src:`regcoil_jax/modes.py` (``init_fourier_modes``)
+- Basis + derivative operators: :src:`regcoil_jax/build_basis.py` (``build_basis_and_f``)
 
 Least-squares formulation
 -------------------------
@@ -115,9 +121,9 @@ Code mapping (core arrays)
    * - Symbol
      - Code / variable name
    * - :math:`\mathbf{f}_j`
-     - ``mats["fx"]``, ``mats["fy"]``, ``mats["fz"]`` (from ``regcoil_jax/build_basis.py``)
+     - ``mats["fx"]``, ``mats["fy"]``, ``mats["fz"]`` (from :src:`regcoil_jax/build_basis.py`)
    * - :math:`\mathbf{d}`
-     - ``mats["dx"]``, ``mats["dy"]``, ``mats["dz"]`` (from ``regcoil_jax/build_matrices_jax.py``)
+     - ``mats["dx"]``, ``mats["dy"]``, ``mats["dz"]`` (from :src:`regcoil_jax/build_matrices_jax.py`)
    * - :math:`\|\mathbf{N}_c\|`
      - ``mats["normNc"]`` (flattened coil ``normN``)
    * - :math:`\|\mathbf{N}_p\|`
@@ -130,7 +136,7 @@ The field error is
 
 .. math::
 
-   \chi_B^2 &= n_\text{fp}\,\Delta\theta_p\,\Delta\zeta_p \sum_{(\theta,\zeta)\in S_p}
+   \chi_B^2 = n_\text{fp}\,\Delta\theta_p\,\Delta\zeta_p \sum_{(\theta,\zeta)\in S_p}
       B_n(\theta,\zeta)^2 \, \|\mathbf{N}_p(\theta,\zeta)\|
 
 The current density diagnostic reported as ``chi2_K`` is
@@ -150,8 +156,8 @@ For any quantity :math:`Q(\theta,\zeta)`, the max-norm diagnostics are
 Code mapping
 ~~~~~~~~~~~~
 
-- Diagnostics: ``regcoil_jax/solve_jax.py`` (``diagnostics``)
-- NetCDF outputs: ``regcoil_jax/io_output.py`` (``chi2_B``, ``chi2_K``, ``max_Bnormal``, ``max_K``)
+- Diagnostics: :src:`regcoil_jax/solve_jax.py` (``diagnostics``)
+- NetCDF outputs: :src:`regcoil_jax/io_output.py` (``chi2_B``, ``chi2_K``, ``max_Bnormal``, ``max_K``)
 
 Lambda scaling in the linear solve
 ----------------------------------
@@ -160,15 +166,17 @@ REGCOIL solves a symmetric linear system for each :math:`\lambda`. For numerical
 
 .. math::
 
-   \mathbf{A}(\lambda) &= \frac{1}{1+\lambda}\mathbf{A}_B + \frac{\lambda}{1+\lambda}\mathbf{A}_K \\
-   \mathbf{b}(\lambda) &= \frac{1}{1+\lambda}\mathbf{b}_B + \frac{\lambda}{1+\lambda}\mathbf{b}_K
+   \begin{aligned}
+   \mathbf{A}(\lambda) &= \frac{1}{1+\lambda}\mathbf{A}_B + \frac{\lambda}{1+\lambda}\mathbf{A}_K, \\
+   \mathbf{b}(\lambda) &= \frac{1}{1+\lambda}\mathbf{b}_B + \frac{\lambda}{1+\lambda}\mathbf{b}_K.
+   \end{aligned}
 
 This scaling leaves the solution unchanged but keeps :math:`\mathbf{A}` and :math:`\mathbf{b}` :math:`\mathcal{O}(1)` for very large :math:`\lambda`.
 
 Code mapping
 ~~~~~~~~~~~~
 
-- ``regcoil_jax/solve_jax.py`` (``solve_for_lambdas`` / ``solve_one_lambda``)
+- :src:`regcoil_jax/solve_jax.py` (``solve_for_lambdas`` / ``solve_one_lambda``)
 
 Regularization options
 ----------------------
@@ -193,8 +201,10 @@ Then:
 
 .. math::
 
+   \begin{aligned}
    \chi_{K}^2(\Phi) &= \langle \Delta K_x, \Delta K_x\rangle + \langle \Delta K_y, \Delta K_y\rangle + \langle \Delta K_z, \Delta K_z\rangle, \\
    \chi_{K_{xy}}^2(\Phi) &= \langle \Delta K_x, \Delta K_x\rangle + \langle \Delta K_y, \Delta K_y\rangle.
+   \end{aligned}
 
 For ``K_zeta``, define the unit tangent along the winding-surface coordinate :math:`\zeta`:
 
@@ -212,7 +222,7 @@ Then:
 
 Code mapping:
 
-- ``regcoil_jax/build_matrices_jax.py`` computes ``matrix_reg`` and ``RHS_reg`` from ``fx/fy/fz`` and ``dx/dy/dz``.
+- :src:`regcoil_jax/build_matrices_jax.py` computes ``matrix_reg`` and ``RHS_reg`` from ``fx/fy/fz`` and ``dx/dy/dz``.
 - ``K_zeta`` additionally projects onto ``rze`` (``dr/dzeta``) to form :math:`\hat{\mathbf{t}}_\zeta`.
 
 Laplace–Beltrami regularization
@@ -254,9 +264,9 @@ This matrix is used both for:
 Code mapping
 ~~~~~~~~~~~~
 
-- Metric tensor and its derivatives (used to form coefficients): ``regcoil_jax/build_matrices_jax.py``
-- Laplace–Beltrami basis construction: ``regcoil_jax/build_basis.py`` (``flb``)
-- Output fields: ``regcoil_jax/io_output.py`` (``Laplace_Beltrami2``, ``chi2_Laplace_Beltrami``)
+- Metric tensor and its derivatives (used to form coefficients): :src:`regcoil_jax/build_matrices_jax.py`
+- Laplace–Beltrami basis construction: :src:`regcoil_jax/build_basis.py` (``flb``)
+- Output fields: :src:`regcoil_jax/io_output.py` (``Laplace_Beltrami2``, ``chi2_Laplace_Beltrami``)
 
 Autodiff postprocessing: coil currents after cutting
 ----------------------------------------------------
@@ -289,9 +299,9 @@ The demo optimizes a mean-square loss
 
 Code mapping:
 
-- coil cutting: ``regcoil_jax/coil_cutting.py``
-- filament Biot–Savart: ``regcoil_jax/biot_savart_jax.py`` (JAX) and ``regcoil_jax/fieldlines.py`` (numpy visualization)
-- per-coil current optimization: ``regcoil_jax/coil_current_optimization.py``
+- coil cutting: :src:`regcoil_jax/coil_cutting.py`
+- filament Biot–Savart: :src:`regcoil_jax/biot_savart_jax.py` (JAX) and :src:`regcoil_jax/fieldlines.py` (NumPy visualization)
+- per-coil current optimization: :src:`regcoil_jax/coil_current_optimization.py`
 
 Dipole sources (hybrid demos)
 -----------------------------
@@ -311,8 +321,8 @@ The field line ODE (in arclength-like parameter :math:`s`) is:
 
 In this repository:
 
-- the Biot–Savart field :math:`\\mathbf{B}` for filament segments is implemented in JAX in ``regcoil_jax/biot_savart_jax.py``,
-- fixed-step RK4 field line integration is implemented in JAX in ``regcoil_jax/fieldlines_jax.py``.
+- the Biot–Savart field :math:`\\mathbf{B}` for filament segments is implemented in JAX in :src:`regcoil_jax/biot_savart_jax.py`,
+- fixed-step RK4 field line integration is implemented in JAX in :src:`regcoil_jax/fieldlines_jax.py`.
 
 Exact Poincaré section extraction finds crossings of :math:`\\phi=\\phi_0\\; (\\mathrm{mod}\\;2\\pi/N_{fp})`, which is discrete.
 For differentiable optimization, we instead use a *soft section weight* for each sampled point:
@@ -325,10 +335,10 @@ and build differentiable statistics (e.g. weighted means in :math:`(R,Z)`).
 
 This is a smooth surrogate of a classic Poincaré plot and is intended for autodiff-based objectives, not as a
 drop-in replacement for plotting-quality crossing points.
-``docs/hybrid_design.rst`` and implemented in:
+:doc:`hybrid_design` and implemented in:
 
-- ``regcoil_jax/dipoles.py``
-- ``regcoil_jax/dipole_optimization.py``
+- :src:`regcoil_jax/dipoles.py`
+- :src:`regcoil_jax/dipole_optimization.py`
 
 REGCOIL also supports a Laplace–Beltrami regularization of the current potential on the winding surface.
 In the Fortran code this is enabled by setting ``regularization_term_option = "Laplace-Beltrami"``.

@@ -8,8 +8,8 @@ This has an important practical consequence:
 **without** explicitly cutting coil filaments.
 
 This page documents the differentiable diagnostics implemented in
-``regcoil_jax.quadcoil_objectives`` and the example
-``examples/3_advanced/quadcoil_style_spacing_length_scan.py``.
+:src:`regcoil_jax/quadcoil_objectives.py` and the example
+:ex:`examples/3_advanced/quadcoil_style_spacing_length_scan.py`.
 
 Background and motivation
 -------------------------
@@ -52,7 +52,7 @@ The surface gradient magnitude is computed using the inverse metric:
   |\nabla_s \Phi|^2
   = g^{\theta\theta}\,\Phi_\theta^2 + 2 g^{\theta\zeta}\,\Phi_\theta\,\Phi_\zeta + g^{\zeta\zeta}\,\Phi_\zeta^2.
 
-Implementation: ``regcoil_jax.quadcoil_objectives.gradphi_squared``.
+Implementation: :src:`regcoil_jax/quadcoil_objectives.py` (``gradphi_squared``).
 
 Coil-to-coil spacing estimate
 -----------------------------
@@ -72,7 +72,7 @@ In REGCOIL-style cutting with ``coils_per_half_period``:
   :math:`\Delta\Phi \approx I_{\mathrm{net}}/N_{\mathrm{coils}}`, where :math:`I_{\mathrm{net}}` is the
   net poloidal current (``net_poloidal_current_Amperes``).
 
-Implementation: ``regcoil_jax.quadcoil_objectives.quadcoil_metrics_from_*`` returns:
+Implementation: :src:`regcoil_jax/quadcoil_objectives.py` (``quadcoil_metrics_from_*``) returns:
 
 * ``coil_spacing_min``: :math:`\min(\Delta s)`,
 * ``coil_spacing_rms``: area-weighted RMS of :math:`\Delta s`.
@@ -96,7 +96,7 @@ If contours are cut with uniform spacing :math:`\Delta\Phi`, then a practical es
 
   L_{\mathrm{total}} \approx \frac{1}{\Delta\Phi}\int_S |\nabla_s \Phi|\,dA.
 
-Implementation: ``total_contour_length_est``.
+Implementation: :src:`regcoil_jax/quadcoil_objectives.py` (``total_contour_length_est``).
 
 Quadratic regularizer on ∫|∇Φ|² dA
 ------------------------------------------------
@@ -115,8 +115,8 @@ in the REGCOIL solve. In ``regcoil_jax`` this is enabled by setting:
 
 Implementation:
 
-* matrix builder: ``regcoil_jax.quadcoil_objectives.build_gradphi2_matrix``
-* integrated in: ``regcoil_jax.build_matrices_jax.build_matrices``.
+* matrix builder: :src:`regcoil_jax/quadcoil_objectives.py` (``build_gradphi2_matrix``)
+* integrated in: :src:`regcoil_jax/build_matrices_jax.py` (``build_matrices``).
 
 Example
 -------

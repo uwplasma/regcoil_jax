@@ -19,7 +19,7 @@ Solver control:
   - ``1``: lambda scan (write all lambdas)
   - ``2``: read NESCOIL potentials from ``nescout_filename``
   - ``3``: SVD scan (NESCOIL-style truncated solutions)
-  - ``4``/``5``: lambda search (Brent-style) to hit a target (see ``docs/theory.rst``)
+  - ``4``/``5``: lambda search (Brent-style) to hit a target (see :doc:`theory`)
 - ``nlambda``, ``lambda_min``, ``lambda_max``: lambda scan / search settings
 - ``target_option``, ``target_value`` (for ``general_option=4/5``): target a quantity such as ``max_K``
 - ``target_option_p`` (for ``target_option="max_K_lse"`` and ``"lp_norm_K"``): the LSE sharpness / p-norm exponent
@@ -75,7 +75,7 @@ Regularization options
   - ``K_zeta``
   - ``Laplace-Beltrami``
 - ``gradphi2_weight`` (optional): adds a Quadcoil-style regularizer on
-  :math:`\int |\nabla_s \Phi|^2\,dA` (see ``docs/quadcoil_objectives.rst``)
+  :math:`\int |\nabla_s \Phi|^2\,dA` (see :doc:`quadcoil_objectives`)
 
 Net currents
 ~~~~~~~~~~~~
@@ -131,5 +131,5 @@ Auxiliary B·n fields
 See also
 --------
 
-- ``docs/parity.rst`` for how output parity is validated.
-- ``scripts/compare_nc.py`` for comparing two output netCDF files.
+- :doc:`parity` for how output parity is validated.
+- :src:`scripts/compare_nc.py` for comparing two output netCDF files.

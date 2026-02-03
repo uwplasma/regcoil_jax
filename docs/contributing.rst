@@ -29,7 +29,7 @@ Generate / update Fortran reference outputs
 -------------------------------------------
 
 The parity tests compare ``regcoil_jax`` outputs against *committed* Fortran netCDF files under
-``tests/fortran_outputs/`` so CI does not require Fortran.
+:tree:`tests/fortran_outputs/` so CI does not require Fortran.
 
 To regenerate one or more reference outputs, you need a compiled Fortran ``regcoil`` executable.
 In this workspace it lives at ``../regcoil/regcoil``.
@@ -46,8 +46,10 @@ Notes:
 
 - The script copies only the **needed** auxiliary files (VMEC ``wout``, EFIT gfile, BNORM, NESCOIL files)
   next to the input before invoking the Fortran executable, matching REGCOIL’s “paths relative to input” behavior.
-- If you add a new parity case, commit both the new ``examples/.../regcoil_in.*`` input and the resulting
-  ``tests/fortran_outputs/regcoil_out.*.nc`` reference.
+- If you add a new parity case, commit the new ``regcoil_in.*`` file under :tree:`examples/` and the resulting
+  reference file under :tree:`tests/fortran_outputs/` (named ``regcoil_out.*.nc``).
+- If you add new example folders, prefer linking to them with :tree:`examples/` so Sphinx linkcheck does not report
+  a ``blob/``→``tree/`` redirect for directories.
 
 Build docs
 ----------
@@ -65,4 +67,3 @@ By default, timing lines are **wall-clock** and may include JAX compilation time
 To force synchronous timing (useful for profiling, slower), set::
 
   REGCOIL_JAX_SYNC_TIMING=1
-

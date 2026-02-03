@@ -17,11 +17,11 @@ The forward pipeline mirrors the Fortran code:
 
 Key modules:
 
-- IO and CLI: ``regcoil_jax/cli.py``, ``regcoil_jax/run.py``
-- Surface construction: ``regcoil_jax/surfaces.py`` and geometry readers in ``regcoil_jax/io_*``
-- Matrix assembly: ``regcoil_jax/build_matrices_jax.py``
-- Linear solves + diagnostics: ``regcoil_jax/solve_jax.py``
-- NetCDF output: ``regcoil_jax/io_output.py``
+- IO and CLI: :src:`regcoil_jax/cli.py`, :src:`regcoil_jax/run.py`
+- Surface construction: :src:`regcoil_jax/surfaces.py` and geometry readers in :tree:`regcoil_jax/`
+- Matrix assembly: :src:`regcoil_jax/build_matrices_jax.py`
+- Linear solves + diagnostics: :src:`regcoil_jax/solve_jax.py`
+- NetCDF output: :src:`regcoil_jax/io_output.py`
 
 JAX constraints and choices
 ---------------------------
@@ -72,7 +72,7 @@ This repo therefore provides:
 
 - robust workflows that **do not differentiate through cutting**, and
 - research/pedagogic *relaxations* that keep filament geometry differentiable
-  (see ``docs/differentiable_coil_cutting.rst``).
+  (see :doc:`differentiable_coil_cutting`).
 
 Adding new geometry options
 ---------------------------
@@ -80,10 +80,10 @@ Adding new geometry options
 New geometry readers should return a ``FourierSurface`` (or compatible evaluated surface arrays) with consistent
 shapes. The most common integration point is:
 
-- add a reader in ``regcoil_jax/io_*.py``,
-- add an option case in ``regcoil_jax/surfaces.py``.
+- add a reader in :tree:`regcoil_jax/`,
+- add an option case in :src:`regcoil_jax/surfaces.py`.
 
 Then update:
 
-- ``docs/feature_matrix.rst`` (coverage),
+- :doc:`feature_matrix` (coverage),
 - examples and parity tests if applicable.

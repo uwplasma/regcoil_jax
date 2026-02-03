@@ -22,16 +22,16 @@ Core execution modes (``general_option``)
      - Lambda scan (most examples)
    * - ``general_option=2``
      - OK
-     - NESCOIL ``nescout`` diagnostics (``examples/2_intermediate/regcoil_in.torus_nescout_diagnostics``)
+     - NESCOIL ``nescout`` diagnostics (:ex:`examples/2_intermediate/regcoil_in.torus_nescout_diagnostics`)
    * - ``general_option=3``
      - OK
-     - Truncated SVD scan (``examples/2_intermediate/regcoil_in.torus_svd_scan``)
+     - Truncated SVD scan (:ex:`examples/2_intermediate/regcoil_in.torus_svd_scan`)
    * - ``general_option=4``
      - OK
-     - Lambda search (no feasibility checks) (``examples/2_intermediate/regcoil_in.lambda_search_option4_torus``)
+     - Lambda search (no feasibility checks) (:ex:`examples/2_intermediate/regcoil_in.lambda_search_option4_torus`)
    * - ``general_option=5``
      - OK
-     - Lambda search (with feasibility checks) (``examples/3_advanced/regcoil_in.lambda_search_*``)
+     - Lambda search (with feasibility checks) (see :tree:`examples/3_advanced/` inputs named ``regcoil_in.lambda_search_*``)
 
 Geometry options
 ----------------
@@ -104,7 +104,7 @@ Derivatives / optimization
      - regcoil_jax targets autodiff instead (no Fortran adjoint port)
    * - Sensitivity outputs (``sensitivity_option>1``)
      - OK
-     - ``xm_sensitivity``, ``xn_sensitivity``, ``omega_coil`` and autodiff-based ``dchi2domega`` parity-tested in ``examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small``
+     - ``xm_sensitivity``, ``xn_sensitivity``, ``omega_coil`` and autodiff-based ``dchi2domega`` parity-tested in :ex:`examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small`
    * - Autodiff through solve pipeline
      - OK
      - JAX differentiates through geometry → matrices → solve → diagnostics
@@ -116,16 +116,16 @@ Outputs and tests
 -----------------
 
 - NetCDF writer targets **schema parity** with the Fortran output for the covered modes.
-- Tests in ``tests/test_examples.py`` run curated inputs and compare the full netCDF contents against committed
+- Tests in :src:`tests/test_examples.py` run curated inputs and compare the full netCDF contents against committed
   Fortran reference outputs.
 
 Beyond-REGCOIL demos
 --------------------
 
 - Coil cutting + per-coil current optimization (autodiff through Biot–Savart) is implemented and demonstrated.
-- JAX-native field line tracing + differentiable “soft Poincaré” utilities are provided in ``regcoil_jax/fieldlines_jax.py`` and demonstrated in ``examples/3_advanced/jax_poincare_grad_demo.py``.
+- JAX-native field line tracing + differentiable “soft Poincaré” utilities are provided in :src:`regcoil_jax/fieldlines_jax.py` and demonstrated in :ex:`examples/3_advanced/jax_poincare_grad_demo.py`.
 - Hybrid “few loops + many dipoles” optimization is provided as a pedagogic example (not part of Fortran parity goals).
-- Quadcoil-style differentiable diagnostics from :math:`\\nabla_s\\Phi` (coil spacing / total length estimates) are provided in ``regcoil_jax/quadcoil_objectives.py``.
-- Permanent-magnet / coillet workflows using a dipole lattice (ridge least squares + fixed-magnitude relaxation) are provided in ``regcoil_jax/permanent_magnets.py``.
-- Differentiable coil cutting **relaxation demo** (soft contour extraction) is provided in ``regcoil_jax/diff_coil_cutting.py`` (research/pedagogic; not a robust replacement for contouring).
-- Differentiable *topology-fixed* multi-coil extraction (“snakes” relaxation) is provided in ``regcoil_jax/diff_coil_cutting.py`` and demonstrated in ``examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py``.
+- Quadcoil-style differentiable diagnostics from :math:`\\nabla_s\\Phi` (coil spacing / total length estimates) are provided in :src:`regcoil_jax/quadcoil_objectives.py`.
+- Permanent-magnet / coillet workflows using a dipole lattice (ridge least squares + fixed-magnitude relaxation) are provided in :src:`regcoil_jax/permanent_magnets.py`.
+- Differentiable coil cutting **relaxation demo** (soft contour extraction) is provided in :src:`regcoil_jax/diff_coil_cutting.py` (research/pedagogic; not a robust replacement for contouring).
+- Differentiable *topology-fixed* multi-coil extraction (“snakes” relaxation) is provided in :src:`regcoil_jax/diff_coil_cutting.py` and demonstrated in :ex:`examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py`.

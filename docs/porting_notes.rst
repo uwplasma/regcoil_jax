@@ -14,7 +14,7 @@ Current parity scope (tested)
 -----------------------------
 
 The CI/test suite compares the full netCDF schema + values against committed Fortran reference outputs for a curated set
-of inputs (see ``tests/test_examples.py`` and ``tests/fortran_outputs/``). Tests additionally check output self-consistency
+of inputs (see :src:`tests/test_examples.py` and :tree:`tests/fortran_outputs/`). Tests additionally check output self-consistency
 by recomputing key scalar diagnostics from the written 2D fields.
 
 Example folder structure
@@ -22,9 +22,15 @@ Example folder structure
 
 Examples are organized by “difficulty” / required physics machinery:
 
-- ``examples/1_simple/``: analytic torus geometry, small grids, easiest to understand.
-- ``examples/2_intermediate/``: JAX-first scripts (JIT/autodiff) that demonstrate differentiable kernels and small optimizations.
-- ``examples/3_advanced/``: VMEC-based cases (requires a ``wout_*.nc`` file), lambda search, and more expensive runs.
+- :tree:`examples/1_simple/`: analytic torus geometry, small grids, easiest to understand.
+- :tree:`examples/2_intermediate/`: JAX-first scripts (JIT/autodiff) that demonstrate differentiable kernels and small optimizations.
+- :tree:`examples/3_advanced/`: VMEC-based cases (requires a ``wout_*.nc`` file), lambda search, and more expensive runs.
+
+Quick links:
+
+- :tree:`examples/1_simple/`
+- :tree:`examples/2_intermediate/`
+- :tree:`examples/3_advanced/`
 
 All ``regcoil_in.*`` files are meant to be runnable via::
 
@@ -70,4 +76,3 @@ Run the Fortran reference in the same directory (rename outputs to avoid overwri
 Compare netCDF files::
 
   python scripts/compare_nc.py fortran.nc jax.nc
-

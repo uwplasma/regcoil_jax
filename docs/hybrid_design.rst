@@ -33,7 +33,7 @@ blowups at very small distances.
 Code mapping
 ~~~~~~~~~~~~
 
-- Dipole field: ``regcoil_jax/dipoles.py`` (``dipole_bfield``, ``dipole_bnormal``)
+- Dipole field: :src:`regcoil_jax/dipoles.py` (``dipole_bfield``, ``dipole_bnormal``)
 
 Hybrid normal-field objective
 -----------------------------
@@ -65,15 +65,15 @@ Because ``regcoil_jax`` uses JAX, gradients are obtained via autodiff:
 Code mapping
 ~~~~~~~~~~~~
 
-- Joint current+dipole optimization: ``regcoil_jax/dipole_optimization.py`` (``optimize_filaments_and_dipoles_to_match_bnormal``)
+- Joint current+dipole optimization: :src:`regcoil_jax/dipole_optimization.py` (``optimize_filaments_and_dipoles_to_match_bnormal``)
 
 Examples
 --------
 
 Compare coil cutting with and without winding-surface optimization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py``
+:ex:`examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py`
 
 This script shows:
 
@@ -87,7 +87,7 @@ This script shows:
 Few loops + many dipoles (windowpane/magnet proxy)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py``
+:ex:`examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py`
 
 This script demonstrates a hybrid optimization in which:
 
@@ -112,4 +112,3 @@ Each script writes to a timestamped ``outputs_*`` folder containing:
 - ``vtk/*.vts``: target surface as a structured grid (ParaView)
 - ``vtk/*.vtp``: coils (polylines), field lines (polylines), Poincaré points (point clouds)
 - ``vtk/dipoles.vtp`` (hybrid dipole demo): dipole locations with moment vectors as point data (use ParaView Glyphs)
-

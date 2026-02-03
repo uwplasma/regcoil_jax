@@ -39,8 +39,8 @@ The most robust approach is:
 
 This repository includes such workflows in:
 
-- ``examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py``
-- ``examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py``
+- :ex:`examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py`
+- :ex:`examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py`
 
 Relaxation demo: soft contour extraction (single-valued θ(ζ))
 --------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ Example:
 
 Implementation:
 
-- ``regcoil_jax.diff_coil_cutting`` (soft contour + interpolator + Biot–Savart on a polyline)
+- :src:`regcoil_jax/diff_coil_cutting.py` (soft contour + interpolator + Biot–Savart on a polyline)
 
 Limitations
 -----------
@@ -98,7 +98,7 @@ If you need differentiable geometry extraction beyond this toy relaxation, a few
 References
 ----------
 
-See ``docs/references.rst`` for a curated list including REGCOIL, quadcoil, FOCUS/FOCUSADD, wireframe coil optimization,
+See :doc:`references` for a curated list including REGCOIL, quadcoil, FOCUS/FOCUSADD, wireframe coil optimization,
 and differentiable geometry extraction references.
 
 Topology-fixed multi-coil relaxation ("snakes")

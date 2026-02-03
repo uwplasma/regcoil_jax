@@ -12,7 +12,7 @@ The Fortran REGCOIL namelist has many options; this parity-first port currently 
 commonly-used keys:
 
 - ``regularization_term_option``: ``"chi2_K"`` (default), ``"K_xy"``, ``"K_zeta"``, or ``"Laplace-Beltrami"``
-- ``gradphi2_weight``: optional additional regularization weight on :math:`\int |\nabla_s \Phi|^2 dA` (Quadcoil-style; see ``docs/quadcoil_objectives.rst``)
+- ``gradphi2_weight``: optional additional regularization weight on :math:`\int |\nabla_s \Phi|^2 dA` (Quadcoil-style; see :doc:`quadcoil_objectives`)
 - ``geometry_option_plasma``:
 
   - ``0``: parity convenience mode (VMEC boundary if ``wout_filename`` is present, else analytic torus)
@@ -33,12 +33,12 @@ commonly-used keys:
     Works with VMEC ``wout_*.nc`` or boundary-only VMEC ``input.*`` files.
   - ``3``: winding surface read from a NESCOIL ``nescin`` file (``nescin_filename``)
   - ``4``: constant-arclength theta coordinate on an offset-from-VMEC winding surface (``separation`` and ``constant_arclength_tolerance``)
-- ``general_option=5``: lambda search (see the ``examples/3_advanced`` inputs)
+- ``general_option=5``: lambda search (see the :tree:`examples/3_advanced/` inputs)
 - ``general_option=2``: compute diagnostics for one or more NESCOIL current potentials stored in ``nescout_filename``
-  (see ``examples/2_intermediate/regcoil_in.torus_nescout_diagnostics``)
-- ``general_option=3``: emulate NESCOIL’s truncated SVD scan (see ``examples/2_intermediate/regcoil_in.torus_svd_scan``)
+  (see :ex:`examples/2_intermediate/regcoil_in.torus_nescout_diagnostics`)
+- ``general_option=3``: emulate NESCOIL’s truncated SVD scan (see :ex:`examples/2_intermediate/regcoil_in.torus_svd_scan`)
 - ``sensitivity_option``: when ``>1``, write winding-surface sensitivity outputs in the netCDF file
-  (see ``examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small``). This requires
+  (see :ex:`examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small`). This requires
   ``mmax_sensitivity>=1`` and ``nmax_sensitivity>=1``.
 
 Lambda search targets
@@ -59,7 +59,7 @@ For ``general_option=4`` or ``general_option=5``, REGCOIL searches for a ``lambd
 Examples
 --------
 
-See `examples/README.md` for the tiered examples layout (`1_simple/`, `2_intermediate/`, `3_advanced/`).
+See :ex:`examples/README.md` for the tiered examples layout (``1_simple/``, ``2_intermediate/``, ``3_advanced/``).
 
 Note: for strict parity with the reference Fortran code, this port reproduces some edge-case behavior,
 including the ``nlambda=2`` lambda-grid producing ``lambda(2)=NaN`` (as in ``regcoil_compute_lambda.f90``).
@@ -69,10 +69,10 @@ Autodiff / Optimization demos
 
 Two examples highlight “JAX-native” workflows:
 
-- `examples/2_intermediate/jax_optimize_coil_minor_radius.py`: differentiable toy optimization (fast).
-- `examples/3_advanced/jax_optimize_separation_vmec_offset.py`: optimizes the VMEC offset-surface ``separation`` parameter
+- :ex:`examples/2_intermediate/jax_optimize_coil_minor_radius.py`: differentiable toy optimization (fast).
+- :ex:`examples/3_advanced/jax_optimize_separation_vmec_offset.py`: optimizes the VMEC offset-surface ``separation`` parameter
   by differentiating through surface construction, matrix build, and the linear solve.
-- `examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py`: optimizes a *spatially varying* ``separation(θ,ζ)``
+- :ex:`examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py`: optimizes a *spatially varying* ``separation(θ,ζ)``
   field, then runs and visualizes REGCOIL “before” and “after”.
 
 Geometry-option examples
@@ -80,14 +80,14 @@ Geometry-option examples
 
 The `examples/1_simple/` tier includes small inputs that exercise the non-VMEC plasma geometry options:
 
-- ``regcoil_in.plasma_option_6_fourier_table`` (``geometry_option_plasma=6``)
-- ``regcoil_in.plasma_option_7_focus_embedded_bnorm`` (``geometry_option_plasma=7`` with embedded Bn coefficients)
-- ``regcoil_in.torus_K_zeta_regularization`` (analytic torus; ``regularization_term_option="K_zeta"``)
+- :ex:`examples/1_simple/regcoil_in.plasma_option_6_fourier_table` (``geometry_option_plasma=6``)
+- :ex:`examples/1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm` (``geometry_option_plasma=7`` with embedded Bn coefficients)
+- :ex:`examples/1_simple/regcoil_in.torus_K_zeta_regularization` (analytic torus; ``regularization_term_option="K_zeta"``)
 
 The `examples/2_intermediate/` tier includes:
 
-- ``regcoil_in.plasma_option_4_vmec_straight_fieldline`` (``geometry_option_plasma=4``; VMEC straight-field-line coordinate)
-- ``regcoil_in.plasma_option_5_efit_lcfs`` (``geometry_option_plasma=5``; EFIT LCFS, ``efit_psiN=1.0``)
+- :ex:`examples/2_intermediate/regcoil_in.plasma_option_4_vmec_straight_fieldline` (``geometry_option_plasma=4``; VMEC straight-field-line coordinate)
+- :ex:`examples/2_intermediate/regcoil_in.plasma_option_5_efit_lcfs` (``geometry_option_plasma=5``; EFIT LCFS, ``efit_psiN=1.0``)
 
 Outputs
 -------

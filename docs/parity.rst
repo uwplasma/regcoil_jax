@@ -9,7 +9,7 @@ What is checked in CI
 The pytest suite runs ``regcoil_jax`` on a set of example inputs and compares the resulting
 ``regcoil_out.*.nc`` file to a committed reference file produced by the Fortran implementation:
 
-- Reference files live in ``tests/fortran_outputs/`` (these are produced locally, then committed so CI can run without Fortran).
+- Reference files live in :tree:`tests/fortran_outputs/` (these are produced locally, then committed so CI can run without Fortran).
 - Tests compare:
   - exact equality of dimension names + sizes
   - exact equality of variable *sets* (no missing or extra variables)
@@ -37,7 +37,7 @@ If you have the Fortran executable available locally (typically ``../regcoil/reg
 
    python scripts/generate_fortran_reference_outputs.py
 
-See ``docs/porting_notes.rst`` for additional notes and troubleshooting.
+See :doc:`porting_notes` for additional notes and troubleshooting.
 
 Sensitivity schema notes
 ------------------------
@@ -49,4 +49,4 @@ netCDF schema quirks that are preserved for strict parity:
 - One sensitivity vector in the reference output is associated with an auto-generated dimension name of the form
   ``dim_00010`` (size depends on ``nomega_coil``).
 
-These details are replicated by ``regcoil_jax/io_output.py`` so tests can enforce exact schema parity.
+These details are replicated by :src:`regcoil_jax/io_output.py` so tests can enforce exact schema parity.

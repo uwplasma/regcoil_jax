@@ -32,7 +32,7 @@ Key inputs:
 
 Example input (strict netCDF parity-tested against Fortran output):
 
-``examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small``
+:ex:`examples/2_intermediate/regcoil_in.torus_sensitivity_option2_small`
 
 Winding surface optimization (autodiff)
 ---------------------------------------
@@ -40,9 +40,9 @@ Winding surface optimization (autodiff)
 The most direct analogue of “winding surface optimization” is optimizing a winding surface parameterization.
 
 This repo includes a spatially varying separation-field optimizer (Fourier-parameterized separation ``sep(θ,ζ)``)
-in ``regcoil_jax/winding_surface_optimization.py`` and an end-to-end demo:
+in :src:`regcoil_jax/winding_surface_optimization.py` and an end-to-end demo:
 
-``examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py``
+:ex:`examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py`
 
 That script:
 
@@ -63,7 +63,7 @@ smooth in parameters like:
 
 The example:
 
-``examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py``
+:ex:`examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py`
 
 demonstrates:
 
@@ -74,9 +74,9 @@ demonstrates:
 
 The implementation lives in:
 
-- ``regcoil_jax/biot_savart_jax.py`` (JAX Biot–Savart on fixed segment geometry)
-- ``regcoil_jax/coil_current_optimization.py`` (autodiff objective + Adam)
-- ``regcoil_jax/optimize.py`` (small Adam implementation; avoids extra deps)
+- :src:`regcoil_jax/biot_savart_jax.py` (JAX Biot–Savart on fixed segment geometry)
+- :src:`regcoil_jax/coil_current_optimization.py` (autodiff objective + Adam)
+- :src:`regcoil_jax/optimize.py` (small Adam implementation; avoids extra deps)
 
 Robust current optimization (misalignments)
 -------------------------------------------
@@ -88,7 +88,7 @@ This is a natural fit for JAX because the ensemble dimension can be handled with
 
 The example:
 
-``examples/3_advanced/jax_robust_optimize_cut_coil_currents_misalignment.py``
+:ex:`examples/3_advanced/jax_robust_optimize_cut_coil_currents_misalignment.py`
 
 optimizes per-coil currents to reduce the mean (and a small variance penalty) of the filament-model
 normal-field error under random per-coil rigid misalignments.
@@ -99,7 +99,7 @@ Rigid alignment optimization (geometry via autodiff)
 To show how geometry parameters can participate in autodiff optimization (without any Fortran adjoints),
 the example:
 
-``examples/3_advanced/jax_optimize_coilset_rigid_alignment.py``
+:ex:`examples/3_advanced/jax_optimize_coilset_rigid_alignment.py`
 
 optimizes a small rigid-transform parameterization (rotation about :math:`z` plus translation) applied to a
 cut coil set, minimizing a normal-field error objective evaluated via a JAX Biot–Savart filament model.
@@ -112,7 +112,7 @@ Hybrid optimizations (filaments + dipoles)
 The following “beyond REGCOIL” demo introduces **point dipoles** as a differentiable proxy for
 small local coils / windowpane coils / permanent magnets:
 
-``examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py``
+:ex:`examples/3_advanced/hybrid_few_loops_many_dipoles_optimize_and_poincare.py`
 
 It optimizes:
 
@@ -121,7 +121,7 @@ It optimizes:
 
 to minimize :math:`B\\cdot n` on a target surface, then generates ParaView outputs and Poincaré plots.
 
-See also ``docs/hybrid_design.rst`` for the dipole equations and objective definition.
+See also :doc:`hybrid_design` for the dipole equations and objective definition.
 
 Quadcoil-style objectives (coil spacing / length from ∇Φ)
 ---------------------------------------------------------------
@@ -134,9 +134,9 @@ and its surface gradient, without explicitly cutting coils. This makes them conv
 
 See:
 
-- ``docs/quadcoil_objectives.rst`` (derivations and normalizations)
-- ``regcoil_jax/quadcoil_objectives.py`` (implementations)
-- ``examples/3_advanced/quadcoil_style_spacing_length_scan.py`` (end-to-end demo + plots)
+- :doc:`quadcoil_objectives` (derivations and normalizations)
+- :src:`regcoil_jax/quadcoil_objectives.py` (implementations)
+- :ex:`examples/3_advanced/quadcoil_style_spacing_length_scan.py` (end-to-end demo + plots)
 
 Permanent magnets (dipole lattices)
 -----------------------------------
@@ -146,9 +146,9 @@ the winding surface, with their moments optimized to cancel :math:`B_{\\mathrm{p
 
 See:
 
-- ``docs/permanent_magnets.rst``
-- ``regcoil_jax/permanent_magnets.py``
-- ``examples/3_advanced/permanent_magnets_cancel_bplasma.py``
+- :doc:`permanent_magnets`
+- :src:`regcoil_jax/permanent_magnets.py`
+- :ex:`examples/3_advanced/permanent_magnets_cancel_bplasma.py`
 
 Differentiable coil cutting (research demo)
 ------------------------------------------------
@@ -157,12 +157,12 @@ Coil cutting via exact contour extraction is non-differentiable. This repo inclu
 relaxation based on soft contour extraction (single-valued :math:`\\theta(\\zeta)`), intended for
 research and experimentation:
 
-- ``docs/differentiable_coil_cutting.rst``
-- ``examples/3_advanced/differentiable_coil_cutting_softcontour.py``
+- :doc:`differentiable_coil_cutting`
+- :ex:`examples/3_advanced/differentiable_coil_cutting_softcontour.py`
 
 For a more robust (topology-fixed) differentiable coil *set* extraction, see:
 
-- ``examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py``
+- :ex:`examples/3_advanced/differentiable_coil_cutting_snakes_multicoil.py`
 
 Poincaré plots and 3D visualization
 -----------------------------------
@@ -188,7 +188,7 @@ For autodiff-based objectives, ``regcoil_jax`` includes a smooth alternative:
 - assign smooth weights to points near a section plane: ``poincare_section_weights``
 - compute differentiable soft section statistics: ``poincare_weighted_RZ``
 
-The demo ``examples/3_advanced/jax_poincare_grad_demo.py`` computes a toy differentiable objective and prints
+The demo :ex:`examples/3_advanced/jax_poincare_grad_demo.py` computes a toy differentiable objective and prints
 the gradient norm with respect to per-coil currents.
 
-For a fuller write-up and a practical end-to-end example, see ``docs/differentiable_poincare.rst``.
+For a fuller write-up and a practical end-to-end example, see :doc:`differentiable_poincare`.
