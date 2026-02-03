@@ -1,4 +1,5 @@
 from __future__ import annotations
+import functools
 import math
 import jax
 import jax.numpy as jnp
@@ -121,7 +122,7 @@ def svd_scan(mats):
     return lambdas, sols_j, chi2_B, chi2_K, max_B, max_K
 
 
-@jax.jit
+@functools.partial(jax.jit, static_argnames=("nfp",))
 def _target_quantity_from_K_distribution(
     *,
     fx: jnp.ndarray,
@@ -153,7 +154,11 @@ def _target_quantity_from_K_distribution(
     maxK = jnp.asarray(max_K, dtype=jnp.float64)
 
     # weights integrate over the winding surface and normalize by area, matching regcoil_diagnostics.f90
-    w = (float(nfp) * float(dth_c) * float(dze_c)) * (normNc / float(area_coil))
+    nfp_f = jnp.asarray(float(nfp), dtype=jnp.float64)
+    dth_f = jnp.asarray(dth_c, dtype=jnp.float64)
+    dze_f = jnp.asarray(dze_c, dtype=jnp.float64)
+    area_f = jnp.asarray(area_coil, dtype=jnp.float64)
+    w = (nfp_f * dth_f * dze_f) * (normNc / area_f)
 
     def max_k_lse():
         # max_K_lse = (1/p)*log(sum(w*exp(p*(K-maxK)))) + maxK

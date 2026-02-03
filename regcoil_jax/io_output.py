@@ -253,9 +253,15 @@ def write_output_nc(
     ds.createVariable("max_K", "f8", ("nlambda",))[:] = np.asarray(max_K, dtype=float)
 
     if target_option == "max_K_lse":
-        ds.createVariable("max_K_lse", "f8", ("nlambda",))[:] = np.asarray(mats.get("max_K_lse", np.full((nlambda,), np.nan)), dtype=float)
+        v = ds.createVariable("max_K_lse", "f8", ("nlambda",))
+        # Match regcoil_write_output.f90: only write these values on successful convergence.
+        if int(exit_code) == 0:
+            v[:] = np.asarray(mats.get("max_K_lse", np.full((nlambda,), np.nan)), dtype=float)
     if target_option == "lp_norm_K":
-        ds.createVariable("lp_norm_K", "f8", ("nlambda",))[:] = np.asarray(mats.get("lp_norm_K", np.full((nlambda,), np.nan)), dtype=float)
+        v = ds.createVariable("lp_norm_K", "f8", ("nlambda",))
+        # Match regcoil_write_output.f90: only write these values on successful convergence.
+        if int(exit_code) == 0:
+            v[:] = np.asarray(mats.get("lp_norm_K", np.full((nlambda,), np.nan)), dtype=float)
 
     if sensitivity_option > 1:
         nomega = int(mats.get("nomega_coil", 0))

@@ -1,0 +1,37 @@
+! Corner-case example: nlambda=2 reproduces REGCOIL's historical NaN lambda-grid behavior.
+!
+! The original Fortran regcoil_compute_lambda.f90 produces lambda(2)=NaN for nlambda=2 due to 0/0.
+! regcoil_jax preserves this for strict netCDF parity tests.
+!
+! Run:
+!   regcoil_jax --platform cpu --verbose examples/1_simple/regcoil_in.nlambda2_corner
+
+&regcoil_nml
+  nlambda = 2
+  lambda_min = 1e-30
+  lambda_max = 1e-10
+
+  ntheta_plasma = 24
+  nzeta_plasma  = 24
+  ntheta_coil   = 24
+  nzeta_coil    = 24
+
+  mpol_potential = 6
+  ntor_potential = 6
+
+  geometry_option_plasma = 1
+  R0_plasma = 3.0
+  a_plasma = 1.0
+  nfp_imposed = 1
+
+  geometry_option_coil = 1
+  R0_coil = 3.0
+  a_coil = 1.7
+
+  net_poloidal_current_amperes = 1.4
+  net_toroidal_current_amperes = 0.3
+
+  symmetry_option = 1
+  regularization_term_option = "chi2_K"
+/
+

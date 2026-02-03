@@ -254,11 +254,14 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "1_simple/regcoil_in.axisymmetrySanityTest_Laplace_Beltrami_regularization",
         "1_simple/regcoil_in.compareToMatlab1",
         "1_simple/regcoil_in.compareToMatlab1_option1",
+        "1_simple/regcoil_in.nlambda2_corner",
         "1_simple/regcoil_in.plasma_option_6_fourier_table",
         "1_simple/regcoil_in.plasma_option_7_focus_embedded_bnorm",
         "2_intermediate/regcoil_in.torus_svd_scan",
         "2_intermediate/regcoil_in.torus_nescout_diagnostics",
         "2_intermediate/regcoil_in.lambda_search_option4_torus",
+        "2_intermediate/regcoil_in.lambda_search_option4_torus_max_K_lse",
+        "2_intermediate/regcoil_in.lambda_search_option4_torus_lp_norm_K",
         "2_intermediate/regcoil_in.plasma_option_5_efit_lcfs",
         "2_intermediate/regcoil_in.torus_sensitivity_option2_small",
         "3_advanced/regcoil_in.lambda_search_1",
@@ -278,6 +281,8 @@ def test_examples_match_fortran_reference(tmp_path: Path):
         "lambda_search_4_chi2_B": 0,
         "lambda_search_5_with_bnorm": 0,
         "lambda_search_option4_torus": 0,
+        "lambda_search_option4_torus_max_K_lse": 0,
+        "lambda_search_option4_torus_lp_norm_K": -1,
     }
 
     # Run in-process for speed so JAX compilation can be reused across cases.
@@ -327,6 +332,8 @@ def test_cli_smoke_outputs(tmp_path: Path):
         out_nc, out_log = _expected_output_paths(tmp_path, input_path.name)
         res = _run_regcoil_jax(input_path)
         assert res.returncode == 0, f"CLI failed for {input_name}.\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
+        assert "This is REGCOIL_JAX" in res.stdout
+        assert "REGCOIL_JAX complete" in res.stdout
         assert out_nc.exists(), f"missing {out_nc}"
         assert out_log.exists(), f"missing {out_log}"
 
