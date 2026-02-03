@@ -28,6 +28,8 @@ import time
 from pathlib import Path
 
 import numpy as np
+import re
+import shutil
 
 try:
     import netCDF4  # noqa: F401
@@ -95,7 +97,48 @@ def main() -> None:
     from regcoil_jax.run import run_regcoil
 
     input_copy = out_dir / input_path.name
-    input_copy.write_text(input_path.read_text(encoding="utf-8", errors="ignore"), encoding="utf-8")
+    txt_src = input_path.read_text(encoding="utf-8", errors="ignore")
+
+    # Copy any referenced auxiliary files next to the input copy, and rewrite paths to basenames.
+    # This keeps each run self-contained and matches REGCOIL's "paths relative to input" behavior.
+    from regcoil_jax.utils import parse_namelist
+
+    inputs = parse_namelist(str(input_path))
+    txt_dst = txt_src
+
+    def _copy_and_rewrite(key: str) -> None:
+        nonlocal txt_dst
+        val = inputs.get(key, None)
+        if not val:
+            return
+        p = Path(str(val))
+        if not p.is_absolute():
+            p = (input_path.parent / p).resolve()
+        if not p.exists():
+            raise FileNotFoundError(f"{key}={val!r} resolved to {p}, but the file does not exist")
+        dst = out_dir / p.name
+        if dst.resolve() != p.resolve():
+            shutil.copy2(p, dst)
+        # Rewrite only the first occurrence; keep the rest unchanged.
+        txt_dst = re.sub(
+            rf"({key}\s*=\s*['\"])([^'\"]+)(['\"])",
+            rf"\1{p.name}\3",
+            txt_dst,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    for key in (
+        "wout_filename",
+        "bnorm_filename",
+        "nescin_filename",
+        "nescout_filename",
+        "shape_filename_plasma",
+        "efit_filename",
+    ):
+        _copy_and_rewrite(key)
+
+    input_copy.write_text(txt_dst, encoding="utf-8")
     res = run_regcoil(str(input_copy), verbose=True)
 
     ds = netCDF4.Dataset(res.output_nc, "r")
@@ -103,7 +146,6 @@ def main() -> None:
         lambdas = np.asarray(ds.variables["lambda"][:], dtype=float)
         chi2_B = np.asarray(ds.variables["chi2_B"][:], dtype=float)
         chi2_K = np.asarray(ds.variables["chi2_K"][:], dtype=float)
-        solutions = np.asarray(ds.variables["solution"][:], dtype=float)  # (nlambda, nbasis)
         nfp = int(ds.variables["nfp"][()])
         net_pol = float(ds.variables["net_poloidal_current_Amperes"][()])
         r_coil_full = np.asarray(ds.variables["r_coil"][:], dtype=float)  # (nzetal, ntheta, 3)
@@ -161,35 +203,32 @@ def main() -> None:
     fig_dir = out_dir / "figures"
     fig_dir.mkdir(exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
+    fig, ax = plt.subplots(figsize=(6.2, 3.6), constrained_layout=True)
     ax.loglog(chi2_K, chi2_B, "o-", ms=3)
     ax.plot([chi2_K[idx]], [chi2_B[idx]], "ro", ms=6, label="chosen")
-    ax.set_xlabel(r"$\\chi^2_K$")
-    ax.set_ylabel(r"$\\chi^2_B$")
+    ax.set_xlabel(r"$\chi^2_K$")
+    ax.set_ylabel(r"$\chi^2_B$")
     ax.set_title("REGCOIL tradeoff curve")
     ax.legend(loc="best")
-    fig.tight_layout()
     fig.savefig(fig_dir / "tradeoff_chi2.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
+    fig, ax = plt.subplots(figsize=(6.2, 3.6), constrained_layout=True)
     ax.semilogx(lambdas, min_spacing, "o-", ms=3)
     ax.axhline(float(args.min_spacing), color="k", linestyle="--", linewidth=1.0, alpha=0.6)
     ax.plot([lambdas[idx]], [min_spacing[idx]], "ro", ms=6)
-    ax.set_xlabel(r"$\\lambda$")
+    ax.set_xlabel(r"$\lambda$")
     ax.set_ylabel("estimated min coil spacing [m]")
     ax.set_title("Coil spacing estimate from ∇Φ")
-    fig.tight_layout()
     fig.savefig(fig_dir / "coil_spacing_est.png")
     plt.close(fig)
 
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
+    fig, ax = plt.subplots(figsize=(6.2, 3.6), constrained_layout=True)
     ax.semilogx(lambdas, length_est, "o-", ms=3)
     ax.plot([lambdas[idx]], [length_est[idx]], "ro", ms=6)
-    ax.set_xlabel(r"$\\lambda$")
+    ax.set_xlabel(r"$\lambda$")
     ax.set_ylabel("estimated total contour length [m]")
     ax.set_title("Total coil length estimate from ∇Φ (coarea-inspired)")
-    fig.tight_layout()
     fig.savefig(fig_dir / "coil_length_est.png")
     plt.close(fig)
 
