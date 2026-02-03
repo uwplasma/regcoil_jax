@@ -397,7 +397,7 @@ def main() -> None:
     plt = _setup_matplotlib()
 
     # Loss history (log-scale).
-    fig = plt.figure(figsize=(6.0, 3.2))
+    fig = plt.figure(figsize=(6.0, 3.2), constrained_layout=True)
     ax = fig.add_subplot(1, 1, 1)
     loss_hist = np.asarray(res.loss_history, dtype=float)
     ax.plot(loss_hist, lw=1.5)
@@ -405,12 +405,11 @@ def main() -> None:
     ax.set_xlabel("Adam step")
     ax.set_ylabel("loss")
     ax.set_title("Axisymmetric winding surface filament optimization")
-    fig.tight_layout()
     fig.savefig(out_dir / "figures" / "loss_history.png")
     plt.close(fig)
 
     # Bn maps before/after (one field period).
-    fig = plt.figure(figsize=(8.2, 3.2))
+    fig = plt.figure(figsize=(8.2, 3.2), constrained_layout=True)
     ax1 = fig.add_subplot(1, 2, 1)
     ax2 = fig.add_subplot(1, 2, 2)
     vmax = float(max(np.max(np.abs(Bn0)), np.max(np.abs(Bn1))) + 1e-300)
@@ -422,12 +421,11 @@ def main() -> None:
     ax2.set_title("B·n (after)")
     ax2.set_xlabel(r"$\theta$ index")
     fig.colorbar(im2, ax=[ax1, ax2], shrink=0.85, pad=0.02, label=r"$B\cdot n$ [T]")
-    fig.tight_layout()
     fig.savefig(out_dir / "figures" / "bn_before_after.png")
     plt.close(fig)
 
     # 3D coil view (after).
-    fig = plt.figure(figsize=(6.0, 5.2))
+    fig = plt.figure(figsize=(6.0, 5.2), constrained_layout=True)
     ax = fig.add_subplot(1, 1, 1, projection="3d")
     coils_np = np.asarray(coils1_full, dtype=float)
     for c in coils_np:
@@ -437,7 +435,6 @@ def main() -> None:
     ax.set_zlabel("z [m]")
     ax.set_title("Optimized filament coils (axisymmetric winding surface)")
     ax.view_init(elev=20.0, azim=35.0)
-    fig.tight_layout()
     fig.savefig(out_dir / "figures" / "coils_3d.png")
     plt.close(fig)
 
@@ -499,4 +496,3 @@ def main() -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-
