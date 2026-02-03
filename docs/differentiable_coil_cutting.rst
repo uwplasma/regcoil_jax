@@ -92,14 +92,14 @@ If you need differentiable geometry extraction beyond this toy relaxation, a few
 - Implicit differentiation through a root-finding problem that defines the contour (still requires careful
   branch handling).
 - Re-parameterizing coils directly (Fourier curves / splines) and **skipping contouring entirely**.
+- Discrete / sparse coil representations (e.g. “wireframe”/polyline methods) and alternate winding-surface
+  parameterizations that avoid contouring, which can be more naturally compatible with autodiff.
 
 References
 ----------
 
-- Landreman, M. (2017). *An improved current potential method for fast computation of stellarator coil shapes* (REGCOIL). Journal of Plasma Physics.
-- Hergt et al. (2024). *Global Stellarator Coil Optimization with Quadratic Constraints and Objectives* (“quadcoil”). arXiv:2408.08267.
-- Helander et al. (2020). *Stellarator construction with permanent magnets*. Physical Review Letters 125, 135002.
-- Remelli et al. (2020). *MeshSDF: Differentiable Iso-Surface Extraction*. NeurIPS 2020.
+See ``docs/references.rst`` for a curated list including REGCOIL, quadcoil, FOCUS/FOCUSADD, wireframe coil optimization,
+and differentiable geometry extraction references.
 
 Topology-fixed multi-coil relaxation ("snakes")
 ===============================================

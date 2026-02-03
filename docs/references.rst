@@ -22,6 +22,19 @@ Free-space coil optimization (FOCUS / AD)
   *Optimized finite-build stellarator coils using automatic differentiation* (FOCUSADD).
   Nuclear Fusion **61** 056024. DOI: 10.1088/1741-4326/abcd76
 
+Discrete / sparse coil design (wireframes, non-contour methods)
+----------------------------------------------------------------
+
+- Hammond, K. C. (2025).
+  *A framework for discrete optimization of stellarator coils*.
+  Nuclear Fusion **65** 046022. DOI: 10.1088/1741-4326/adbb02
+- Biu, J. & Jorge, R. (2025).
+  *Axisymmetric coil winding surfaces for non-axisymmetric fusion devices*.
+  Fundamental Plasma Physics **15** 100098. DOI: 10.1016/j.fpp.2025.100098
+- Lobsien, J.-F., Drevlak, M., Pedersen, T., & the W7-X Team (2018).
+  *Stellarator coil optimization towards higher engineering tolerances*.
+  Nuclear Fusion **58** 106013. DOI: 10.1088/1741-4326/aad431
+
 Quadratic-constraint coil optimization
 --------------------------------------
 
