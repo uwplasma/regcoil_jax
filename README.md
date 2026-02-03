@@ -105,6 +105,12 @@ JAX-native fieldline tracing + soft Poincaré gradients (demo):
 python examples/3_advanced/jax_poincare_grad_demo.py
 ```
 
+Optimize per-coil currents with a differentiable (soft) Poincaré penalty:
+
+```bash
+python examples/3_advanced/jax_optimize_currents_with_differentiable_poincare.py
+```
+
 Quadcoil-style ∇Φ diagnostics (coil spacing / total coil length estimates) + optional coil cutting:
 
 ```bash

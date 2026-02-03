@@ -108,6 +108,10 @@ Example demo (prints gradient norms):
 
   python examples/3_advanced/jax_poincare_grad_demo.py
 
+See also:
+
+- ``docs/differentiable_poincare.rst`` for a full derivation and a practical optimization example.
+
 Poincaré sections
 -----------------
 

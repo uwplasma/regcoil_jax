@@ -24,6 +24,7 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
    quadcoil_objectives
    permanent_magnets
    differentiable_coil_cutting
+   differentiable_poincare
    hybrid_design
    visualization
    api

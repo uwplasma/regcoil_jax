@@ -162,3 +162,5 @@ For autodiff-based objectives, ``regcoil_jax`` includes a smooth alternative:
 
 The demo ``examples/3_advanced/jax_poincare_grad_demo.py`` computes a toy differentiable objective and prints
 the gradient norm with respect to per-coil currents.
+
+For a fuller write-up and a practical end-to-end example, see ``docs/differentiable_poincare.rst``.

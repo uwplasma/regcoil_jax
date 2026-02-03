@@ -38,3 +38,35 @@ def test_fieldline_trace_is_differentiable_wrt_currents():
     g = jax.grad(loss)(jnp.asarray(1.0e5, dtype=jnp.float64))
     assert np.isfinite(float(g))
 
+
+def test_soft_poincare_candidates_are_differentiable():
+    import jax
+    import jax.numpy as jnp
+
+    from regcoil_jax.biot_savart_jax import segments_from_filaments
+    from regcoil_jax.fieldlines_jax import soft_poincare_candidates, trace_fieldlines_rk4
+
+    jax.config.update("jax_enable_x64", True)
+
+    pts = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0],
+        ],
+        dtype=float,
+    )
+    segs = segments_from_filaments(filaments_xyz=[pts])
+    starts = jnp.asarray([[2.0, 0.0, 0.2]], dtype=jnp.float64)
+
+    def f(I0):
+        I = jnp.asarray([I0], dtype=jnp.float64)
+        traced = trace_fieldlines_rk4(segs, starts=starts, filament_currents=I, ds=0.02, n_steps=80, stop_radius=10.0)
+        cand, w = soft_poincare_candidates(traced.points, nfp=1, phi0=0.0, alpha=30.0, beta=30.0, gamma=5.0)
+        # Smooth scalar from weighted candidates.
+        z = cand[..., 2]
+        return jnp.sum(w * (z * z)) / (jnp.sum(w) + 1e-12)
+
+    g = jax.grad(f)(jnp.asarray(1.0e5, dtype=jnp.float64))
+    assert np.isfinite(float(g))

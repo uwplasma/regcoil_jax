@@ -112,6 +112,12 @@ original Fortran REGCOIL distribution:
   python examples/3_advanced/jax_poincare_grad_demo.py
   ```
 
+- Optimize per-coil currents with a differentiable (soft) Poincaré penalty:
+
+  ```bash
+  python examples/3_advanced/jax_optimize_currents_with_differentiable_poincare.py
+  ```
+
 You can independently disable figures or VTK outputs:
 
 ```bash

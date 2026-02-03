@@ -160,3 +160,137 @@ def poincare_weighted_RZ(
     Rm = jnp.sum(wn * R, axis=1)
     Zm = jnp.sum(wn * Z, axis=1)
     return Rm, Zm
+
+
+def soft_poincare_candidates(
+    points: Any,
+    *,
+    nfp: int,
+    phi0: float = 0.0,
+    alpha: float = 50.0,
+    beta: float = 50.0,
+    gamma: float = 10.0,
+    eps: float = 1e-12,
+) -> tuple[jnp.ndarray, jnp.ndarray]:
+    """Differentiable candidate crossing points for a Poincaré section.
+
+    This function produces a **weighted point cloud** of candidate section points.
+    It is designed for autodiff-based optimization, where discrete crossing detection
+    is problematic.
+
+    Given sampled fieldline points :math:`x_i`, define:
+
+    - toroidal angle :math:`\\phi_i = \\mathrm{atan2}(y_i, x_i)`
+    - phase :math:`u_i = n_{fp}(\\phi_i - \\phi_0)`
+    - event :math:`r_i = \\sin(u_i)`
+
+    For each segment :math:`(x_0,x_1)`, we form a candidate point by linear interpolation
+    at the (unconstrained) root of :math:`r`:
+
+    - :math:`t = r_0 / (r_0 - r_1 + \\varepsilon)`
+    - :math:`p = (1-t)\\,x_0 + t\\,x_1`
+
+    We then assign a smooth weight:
+
+    - :math:`w_{cross} = \\sigma(-\\alpha\\,r_0 r_1)` (large when a sign change is likely)
+    - :math:`w_{near} = \\exp(-\\beta\\,(r_0^2 + r_1^2))` (large when endpoints are near the plane)
+    - :math:`w_{plane} = \\sigma(\\gamma\\,\\cos(u_{mid}))` (selects :math:`\\phi=\\phi_0` vs :math:`\\phi_0+\\pi/n_{fp}`)
+
+    The final weight is :math:`w = w_{cross} w_{near} w_{plane}`.
+
+    The returned candidates are (nlines, nseg, 3) with corresponding weights (nlines, nseg).
+
+    Notes:
+
+    - Candidates are meaningful only when the discretization is fine enough that crossings
+      are bracketed by adjacent samples.
+    - This is a differentiable surrogate for optimization, not a plotting-quality extractor.
+    """
+    x = jnp.asarray(points, dtype=jnp.float64)
+    if x.ndim != 3 or int(x.shape[2]) != 3:
+        raise ValueError("points must be (nlines, npts, 3)")
+    if int(x.shape[1]) < 2:
+        raise ValueError("points must have at least 2 samples along the line")
+
+    nfp = int(nfp)
+    if nfp <= 0:
+        raise ValueError("nfp must be positive")
+
+    phi = jnp.arctan2(x[:, :, 1], x[:, :, 0])
+    u = float(nfp) * (phi - jnp.asarray(phi0, dtype=jnp.float64))
+    r = jnp.sin(u)
+
+    x0 = x[:, :-1, :]
+    x1 = x[:, 1:, :]
+    r0 = r[:, :-1]
+    r1 = r[:, 1:]
+    u0 = u[:, :-1]
+    u1 = u[:, 1:]
+    um = 0.5 * (u0 + u1)
+
+    denom = (r0 - r1)
+    t = r0 / (denom + jnp.asarray(eps, dtype=jnp.float64))
+    p = x0 + t[:, :, None] * (x1 - x0)
+
+    w_cross = jax.nn.sigmoid((-float(alpha)) * (r0 * r1))
+    w_near = jnp.exp((-float(beta)) * (r0 * r0 + r1 * r1))
+    w_plane = jax.nn.sigmoid(float(gamma) * jnp.cos(um))
+    w = w_cross * w_near * w_plane
+    return p, w
+
+
+def squared_distance_point_to_segment_2d(
+    p_xy: jnp.ndarray,
+    a_xy: jnp.ndarray,
+    b_xy: jnp.ndarray,
+    eps: float = 1e-12,
+) -> jnp.ndarray:
+    """Squared distance from 2D points p to segments a->b (broadcastable).
+
+    p_xy: (..., 2)
+    a_xy: (M, 2) or broadcastable with p
+    b_xy: (M, 2) or broadcastable with p
+    """
+    p = jnp.asarray(p_xy, dtype=jnp.float64)
+    a = jnp.asarray(a_xy, dtype=jnp.float64)
+    b = jnp.asarray(b_xy, dtype=jnp.float64)
+    ab = b - a
+    ap = p[..., None, :] - a[None, :, :]  # (..., M, 2)
+    ab2 = jnp.sum(ab * ab, axis=-1) + jnp.asarray(eps, dtype=jnp.float64)  # (M,)
+    t = jnp.sum(ap * ab[None, :, :], axis=-1) / ab2[None, :]  # (..., M)
+    t = jnp.clip(t, 0.0, 1.0)
+    proj = a[None, :, :] + t[..., None] * ab[None, :, :]
+    d = (p[..., None, :] - proj)
+    return jnp.sum(d * d, axis=-1)  # (..., M)
+
+
+def softmin_squared_distance_to_polyline_2d(
+    points_xy: Any,
+    *,
+    polyline_xy: Any,
+    beta: float = 200.0,
+    eps: float = 1e-12,
+) -> jnp.ndarray:
+    """Smooth approximation to min squared distance from points to a 2D polyline.
+
+    Returns:
+      d2: (N,) approximate min squared distance
+    """
+    pts = jnp.asarray(points_xy, dtype=jnp.float64)
+    poly = jnp.asarray(polyline_xy, dtype=jnp.float64)
+    if pts.ndim != 2 or int(pts.shape[1]) != 2:
+        raise ValueError("points_xy must be (N,2)")
+    if poly.ndim != 2 or int(poly.shape[1]) != 2 or int(poly.shape[0]) < 2:
+        raise ValueError("polyline_xy must be (M,2) with M>=2")
+
+    a = poly[:-1]
+    b = poly[1:]
+    d2 = squared_distance_point_to_segment_2d(pts, a, b, eps=float(eps))  # (N, M-1)
+
+    bta = jnp.asarray(beta, dtype=jnp.float64)
+    bta = jnp.where(bta == 0.0, jnp.asarray(1.0, dtype=jnp.float64), bta)
+    # softmin(d2) = -1/beta * logsumexp(-beta*d2)
+    z = (-bta) * d2
+    zmax = jnp.max(z, axis=1, keepdims=True)
+    lse = zmax + jnp.log(jnp.sum(jnp.exp(z - zmax), axis=1, keepdims=True) + jnp.asarray(eps, dtype=jnp.float64))
+    return (-1.0 / bta) * lse[:, 0]
