@@ -114,3 +114,17 @@ From the project root::
 To also run slow/high-resolution examples (not recommended for CI)::
 
   REGCOIL_JAX_RUN_SLOW=1 pytest -q
+
+Verbose output / debugging
+--------------------------
+
+When you pass ``--verbose``, the CLI prints a Fortran-style progress log (surface initialization,
+matrix build phases, and per-``lambda`` diagnostics).
+
+For more accurate (synchronous) timing of matrix-assembly phases, you can set::
+
+  REGCOIL_JAX_SYNC_TIMING=1
+
+To write extra debug artifacts (currently: surface-shape JSON and VMEC boundary coefficient dumps), use::
+
+  regcoil_jax --platform cpu --verbose --debug_dir /tmp/regcoil_jax_debug examples/3_advanced/regcoil_in.lambda_search_1

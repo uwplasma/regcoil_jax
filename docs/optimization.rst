@@ -78,6 +78,21 @@ The implementation lives in:
 - ``regcoil_jax/coil_current_optimization.py`` (autodiff objective + Adam)
 - ``regcoil_jax/optimize.py`` (small Adam implementation; avoids extra deps)
 
+Robust current optimization (misalignments)
+-------------------------------------------
+
+Because the filament Biot–Savart model is fully differentiable, it is straightforward to optimize
+**robust** objectives that average performance over an ensemble of perturbations.
+
+This is a natural fit for JAX because the ensemble dimension can be handled with ``jax.vmap``.
+
+The example:
+
+``examples/3_advanced/jax_robust_optimize_cut_coil_currents_misalignment.py``
+
+optimizes per-coil currents to reduce the mean (and a small variance penalty) of the filament-model
+normal-field error under random per-coil rigid misalignments.
+
 Hybrid optimizations (filaments + dipoles)
 ------------------------------------------
 

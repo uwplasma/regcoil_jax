@@ -17,6 +17,7 @@ parity-first correctness while keeping the forward pipeline compatible with JAX 
    io_reference
    theory
    parity
+   contributing
    porting_notes
    feature_matrix
    design

@@ -22,6 +22,7 @@ Solver control:
   - ``4``/``5``: lambda search (Brent-style) to hit a target (see ``docs/theory.rst``)
 - ``nlambda``, ``lambda_min``, ``lambda_max``: lambda scan / search settings
 - ``target_option``, ``target_value`` (for ``general_option=4/5``): target a quantity such as ``max_K``
+- ``target_option_p`` (for ``target_option="max_K_lse"`` and ``"lp_norm_K"``): the LSE sharpness / p-norm exponent
 
 Discretization:
 
@@ -110,6 +111,7 @@ Key arrays (lambda-dependent)
 - ``solution`` and ``single_valued_current_potential_mn``: (nlambda, num_basis_functions)
 - ``chi2_B``, ``chi2_K``: (nlambda,)
 - ``max_Bnormal``, ``max_K``: (nlambda,)
+- ``max_K_lse`` or ``lp_norm_K``: (nlambda,) when the corresponding ``target_option`` is selected in a lambda search
 - ``Bnormal_total``: (nlambda, nzeta_plasma, ntheta_plasma)
 - ``current_potential`` and ``single_valued_current_potential_thetazeta``: (nlambda, nzeta_coil, ntheta_coil)
 - ``K2``: (nlambda, nzeta_coil, ntheta_coil)

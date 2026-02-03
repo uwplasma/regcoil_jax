@@ -53,6 +53,14 @@ regcoil_jax --platform cpu --verbose examples/1_simple/regcoil_in.compareToMatla
 regcoil_jax --platform cpu --verbose examples/3_advanced/regcoil_in.lambda_search_1
 ```
 
+`--verbose` prints a Fortran-style progress log (surface initialization, matrix build phases, and per-λ diagnostics).
+
+For more accurate (synchronous) timing of matrix-assembly phases (slower), set:
+
+```bash
+export REGCOIL_JAX_SYNC_TIMING=1
+```
+
 Outputs are written **next to the input file**:
 
 - ``regcoil_out.<case>.nc``
@@ -91,6 +99,12 @@ Optimize per-coil currents after cutting (autodiff through Biot–Savart):
 
 ```bash
 python examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py
+```
+
+Robust per-coil current optimization under coil misalignments (vmap + autodiff):
+
+```bash
+python examples/3_advanced/jax_robust_optimize_cut_coil_currents_misalignment.py
 ```
 
 Hybrid (few loops + many dipoles) B·n optimization + Poincaré:
@@ -168,3 +182,4 @@ User documentation lives in ``docs/`` (Sphinx). Key pages:
 - ``docs/visualization.rst``: figures + ParaView outputs
 - ``docs/quadcoil_objectives.rst``: coil spacing/length diagnostics from ∇Φ
 - ``docs/permanent_magnets.rst``: dipole lattice workflows
+- ``docs/contributing.rst``: dev install, tests, parity baselines
