@@ -10,6 +10,7 @@ import numpy as np
 from .utils import parse_namelist, resolve_existing_path
 from .io_vmec import read_wout_boundary, compute_curpol_and_G
 from .io_vmec_input import read_vmec_input_boundary, vmec_input_boundary_as_fourier_surface
+from .fortran_verbose import FortranVerbose
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,7 @@ def run_regcoil(
         raise ValueError("Input file must be named regcoil_in.XXX for some extension XXX")
 
     inputs = parse_namelist(input_path_abs)
+    logger = FortranVerbose(enabled=bool(verbose))
 
     # Resolve any filenames relative to the input directory (matching REGCOIL behavior).
     if "wout_filename" in inputs:
@@ -89,21 +91,44 @@ def run_regcoil(
     if debug_dir is not None:
         os.makedirs(debug_dir, exist_ok=True)
 
+    if verbose:
+        logger.header()
+        logger.resolution_block(
+            input_basename=base,
+            ntheta_plasma=int(inputs.get("ntheta_plasma", 0)),
+            ntheta_coil=int(inputs.get("ntheta_coil", 0)),
+            nzeta_plasma=int(inputs.get("nzeta_plasma", 0)),
+            nzeta_coil=int(inputs.get("nzeta_coil", 0)),
+            mpol_potential=int(inputs.get("mpol_potential", 12)),
+            ntor_potential=int(inputs.get("ntor_potential", 12)),
+            symmetry_option=int(inputs.get("symmetry_option", 1)),
+        )
+
+        # Print the lambda list early (as in regcoil_read_input.f90 + regcoil_compute_lambda.f90).
+        try:
+            lambdas_preview = np.asarray(lambda_grid(inputs), dtype=float).tolist()
+        except Exception:
+            lambdas_preview = []
+        if lambdas_preview:
+            logger.lambda_list(lambdas_preview)
+
     # VMEC boundary (optional, used by plasma/coil options 2/3/4 and coil options 2/4)
     vmec_surface = None
     gpl = int(inputs.get("geometry_option_plasma", 1))
     gcl = int(inputs.get("geometry_option_coil", 1))
+    vmec_source = None
+    vmec_metadata = None
     if gpl in (2, 3, 4) or gcl in (2, 4) or (gpl == 0 and "wout_filename" in inputs):
         wout = inputs.get("wout_filename", None)
         if wout is None:
             raise ValueError("VMEC-based geometry requires wout_filename")
         wout = _resolve_relpath(str(wout))
+        vmec_source = str(wout)
         if str(wout).endswith(".nc"):
             radial_mode = "half" if gpl in (3, 4) else "full"
             bound = read_wout_boundary(str(wout), radial_mode=radial_mode)
             curpol, G, nfp, lasym = compute_curpol_and_G(bound)
-            if verbose:
-                print(f"[vmec] nfp={nfp} lasym={lasym} curpol={curpol} G={G}")
+            vmec_metadata = dict(nfp=int(nfp), lasym=bool(lasym), curpol=curpol, G=G)
             # Match regcoil_init_plasma_mod.f90 behavior: if a VMEC wout file is used
             # for the plasma surface and VMEC profile arrays are available, override net poloidal current.
             if (curpol is not None) and (G is not None):
@@ -150,11 +175,105 @@ def run_regcoil(
             vmec_surface = vmec_input_boundary_as_fourier_surface(vin)
             inputs["nfp_imposed"] = int(vin.nfp)
             if verbose:
-                print(f"[vmec_input] nfp={vin.nfp} lasym={vin.lasym} mnmax={int(vin.xm.size)} file={wout}")
+                logger.surface_detail(
+                    f"VMEC input boundary: nfp={int(vin.nfp)} lasym={bool(vin.lasym)} mnmax={int(vin.xm.size)} file={wout}"
+                )
 
-    # Build surfaces
+    def _surface_area_volume(*, surf, ntheta: int, nzeta: int, nfp: int) -> tuple[float, float]:
+        dth = float(2.0 * np.pi / max(int(ntheta), 1))
+        dze = float((2.0 * np.pi / max(int(nfp), 1)) / max(int(nzeta), 1))
+        area = float(nfp) * dth * dze * float(jnp.sum(surf["normN"]))
+
+        r3tz = jnp.asarray(surf["r"])  # (3,T,Z) for a single field period
+        R2 = r3tz[0] * r3tz[0] + r3tz[1] * r3tz[1]
+        Z = r3tz[2]
+        R2_half = 0.5 * (R2[:-1, :] + R2[1:, :])
+        dZ = Z[1:, :] - Z[:-1, :]
+        acc = jnp.sum(R2_half * dZ)
+        acc = acc + jnp.sum(0.5 * (R2[0, :] + R2[-1, :]) * (Z[0, :] - Z[-1, :]))
+        volume = float(jnp.abs((float(nfp) * acc) * dze / 2.0))
+        return area, volume
+
+    # Build surfaces (and print Fortran-style initialization messages in verbose mode).
+    t0_init_plasma = _time.perf_counter()
+    if verbose:
+        logger.init_surface("plasma")
+        gpl_eff = gpl
+        if gpl == 0:
+            gpl_eff = 2 if (vmec_surface is not None and inputs.get("wout_filename", None) is not None) else 1
+        if gpl_eff == 1:
+            logger.surface_detail("Building a plain circular torus.")
+        elif gpl_eff in (2, 3):
+            logger.surface_detail(f"Using VMEC boundary from {vmec_source}.")
+        elif gpl_eff == 4:
+            logger.surface_detail(f"Using VMEC boundary with straight-field-line poloidal coordinate from {vmec_source}.")
+        elif gpl_eff == 5:
+            logger.surface_detail(f"Using EFIT boundary from {inputs.get('efit_filename', '(unknown)')}.")
+        elif gpl_eff == 6:
+            logger.surface_detail(f"Using Fourier-table boundary from {inputs.get('shape_filename_plasma', '(unknown)')}.")
+        elif gpl_eff == 7:
+            logger.surface_detail(f"Using FOCUS boundary from {inputs.get('shape_filename_plasma', '(unknown)')}.")
+        else:
+            logger.surface_detail(f"Using geometry_option_plasma={gpl_eff}.")
+        if vmec_metadata is not None:
+            logger.surface_detail(
+                f"VMEC metadata: nfp={vmec_metadata['nfp']} lasym={vmec_metadata['lasym']} curpol={vmec_metadata['curpol']} G={vmec_metadata['G']}"
+            )
+
     plasma = plasma_surface_from_inputs(inputs, vmec_surface)
+    t1_init_plasma = _time.perf_counter()
+
+    if verbose:
+        area_p, vol_p = _surface_area_volume(
+            surf=plasma,
+            ntheta=int(inputs.get("ntheta_plasma", 0)),
+            nzeta=int(inputs.get("nzeta_plasma", 0)),
+            nfp=int(plasma["nfp"]),
+        )
+        logger.surface_area_volume(which="plasma", area=area_p, volume=vol_p)
+        if vmec_surface is None:
+            logger.surface_detail(
+                "No VMEC file is available, so net_poloidal_current_Amperes will be taken from the regcoil input."
+            )
+        logger.done_init_surface("plasma", float(t1_init_plasma - t0_init_plasma))
+
+    t0_init_coil = _time.perf_counter()
+    if verbose:
+        logger.init_surface("coil")
+        gcl_eff = gcl
+        if gcl == 0:
+            gcl_eff = 2 if (vmec_surface is not None and inputs.get("wout_filename", None) is not None) else 1
+        if gcl_eff == 1:
+            logger.surface_detail("Building a plain circular torus.")
+        elif gcl_eff == 2:
+            logger.surface_detail("Offset surface from plasma (VMEC) with Fourier refit.")
+        elif gcl_eff == 4:
+            logger.surface_detail("Offset surface from plasma (VMEC) with constant-arclength theta.")
+        else:
+            logger.surface_detail(f"Using geometry_option_coil={gcl_eff}.")
+
     coil = coil_surface_from_inputs(inputs, plasma, vmec_surface)
+    t1_init_coil = _time.perf_counter()
+
+    if verbose:
+        logger.surface_detail(f"Evaluating coil surface & derivatives: {float(t1_init_coil - t0_init_coil):.8E} sec.")
+        area_c, vol_c = _surface_area_volume(
+            surf=coil,
+            ntheta=int(inputs.get("ntheta_coil", 0)),
+            nzeta=int(inputs.get("nzeta_coil", 0)),
+            nfp=int(plasma["nfp"]),
+        )
+        logger.surface_area_volume(which="coil", area=area_c, volume=vol_c)
+        logger.done_init_surface("coil", float(t1_init_coil - t0_init_coil))
+
+        load_bnorm = bool(inputs.get("load_bnorm", False))
+        if not load_bnorm:
+            logger.bnorm_message("Not reading a bnorm file, so Bnormal_from_plasma_current arrays will all be 0.")
+        else:
+            if plasma.get("focus_bnorm", None) is not None:
+                logger.bnorm_message("Reading Bn modes embedded in the FOCUS boundary file.")
+            else:
+                logger.bnorm_message(f"Reading bnorm file: {inputs.get('bnorm_filename', '(missing)')}")
 
     def _surface_shapes(surf):
         return dict(
@@ -177,12 +296,6 @@ def run_regcoil(
         if a.ndim != 2:
             raise ValueError(f"{name}.normN expected shape (T,Z) but got {tuple(a.shape)}")
 
-    if verbose:
-        print(f"[regcoil_jax] input: {input_path_abs}")
-        print(f"[regcoil_jax] parsed keys: {sorted(list(inputs.keys()))}")
-        print(f"[regcoil_jax] plasma shapes: {_surface_shapes(plasma)}")
-        print(f"[regcoil_jax] coil   shapes: {_surface_shapes(coil)}")
-
     if verbose or debug_dir is not None:
         _assert_surface_shapes("plasma", plasma)
         _assert_surface_shapes("coil", coil)
@@ -197,11 +310,12 @@ def run_regcoil(
 
     t0_total = _time.perf_counter()
 
-    if verbose:
-        print("[regcoil_jax] building matrices (this may take a bit the first time due to JIT)...")
     t0_build = _time.perf_counter()
-    mats = build_matrices(inputs, plasma, coil)
+    sync_timing = bool(int(os.environ.get("REGCOIL_JAX_SYNC_TIMING", "0")))
+    mats = build_matrices(inputs, plasma, coil, verbose=bool(verbose), logger=logger, sync_timing=sync_timing)
     t1_build = _time.perf_counter()
+    if verbose:
+        logger.p(" Optimal LWORK: (not applicable; using jax.numpy.linalg.solve)")
 
     t0_solve = _time.perf_counter()
     general_option = int(inputs.get("general_option", 1))
@@ -282,16 +396,30 @@ def run_regcoil(
         exit_code = 0
     t1_solve = _time.perf_counter()
 
+    # Extra diagnostics for Fortran-style terminal output.
+    nfp = int(mats.get("nfp", 1))
+    dth_c = float(mats["dth_c"])
+    dze_c = float(mats["dze_c"])
+    normNc = mats["normNc"]
+    flb = mats["flb"]
+    dLB = mats["d_Laplace_Beltrami"]
+    KLB = dLB[None, :] - (sols @ flb.T)  # (nlambda, Ncoil)
+    LB2_times_N = (KLB * KLB) / normNc[None, :]
+    chi2_LB = (float(nfp) * dth_c * dze_c) * jnp.sum(LB2_times_N, axis=1)
+
+    area_coil = float(mats.get("area_coil", 1.0))
+    rms_K = jnp.sqrt(jnp.asarray(chi2_K, dtype=jnp.float64) / area_coil)
+
     # Optional sensitivity outputs (winding surface Fourier-coefficient derivatives).
     sensitivity_option = int(inputs.get("sensitivity_option", 1))
     if sensitivity_option > 1:
         if verbose:
-            print("[regcoil_jax] computing sensitivity outputs (autodiff; may take a while)...")
+            logger.p(" Computing sensitivity outputs (autodiff; may take a while)...")
         try:
             sens = compute_sensitivity_outputs(inputs=inputs, plasma=plasma, coil=coil, lambdas=lambdas, exit_code=exit_code)
         except Exception as e:
             if verbose:
-                print(f"[regcoil_jax] ERROR: sensitivity output computation failed: {e}")
+                logger.p(f" ERROR: sensitivity output computation failed: {e}")
             raise
         mats.update(sens)
 
@@ -334,15 +462,23 @@ def run_regcoil(
                 )
     except Exception as e:
         if verbose:
-            print(f"[regcoil_jax] WARNING: could not write summary log: {e}")
+            logger.p(f" WARNING: could not write summary log: {e}")
 
     if verbose:
-        print(f"[regcoil_jax] timing: build_matrices={float(t1_build - t0_build):.3f}s solve+diagnostics={float(t1_solve - t0_solve):.3f}s total={float(t1_total - t0_total):.3f}s")
-        for j in range(len(lambdas)):
-            mark = "*" if (idx is not None and j == idx) else " "
-            print(
-                f"{mark} j={j:02d}  lambda={float(lambdas[j]):.3e}  chi2_B={float(chi2_B[j]):.3e}  chi2_K={float(chi2_K[j]):.3e}  max|B|={float(max_B[j]):.3e}  maxK={float(max_K[j]):.3e}"
+        nlam = int(len(lambdas))
+        for j in range(nlam):
+            logger.solve_one(
+                lam=float(lambdas[j]),
+                j=int(j + 1),
+                n=int(nlam),
+                chi2_B=float(chi2_B[j]),
+                chi2_K=float(chi2_K[j]),
+                chi2_LB=float(chi2_LB[j]),
+                max_B=float(max_B[j]),
+                max_K=float(max_K[j]),
+                rms_K=float(rms_K[j]),
             )
+        logger.complete(sec=float(t1_total - t0_total), out_nc_basename=os.path.basename(out_nc))
 
     return RunResult(
         input_path=input_path_abs,

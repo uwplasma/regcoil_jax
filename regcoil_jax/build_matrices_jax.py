@@ -7,6 +7,7 @@ from .kernel import inductance_and_h_sum
 from .io_bnorm import read_bnorm_modes
 from .spectral_deriv import deriv_theta, deriv_zeta
 from .quadcoil_objectives import build_gradphi2_matrix
+from .fortran_verbose import FortranVerbose
 
 def _flatten_TZ_to_N3(r_3TZ):
     # (3,T,Z) -> (N,3)
@@ -15,7 +16,7 @@ def _flatten_TZ_to_N3(r_3TZ):
 def _flatten_TZ_to_N(r_TZ):
     return jnp.reshape(r_TZ, (-1,))
 
-def build_matrices(inputs, plasma, coil):
+def build_matrices(inputs, plasma, coil, *, verbose: bool = False, logger: FortranVerbose | None = None, sync_timing: bool = False):
     """Build REGCOIL matrices in JAX (subset).
 
     Currently supports:
@@ -24,6 +25,11 @@ def build_matrices(inputs, plasma, coil):
       - geometry_option_coil in {0,1,2,3,4} (see surfaces.py)
       - load_bnorm (bnorm file) for Bnormal_from_plasma_current
     """
+    import time as _time
+
+    if logger is None:
+        logger = FortranVerbose(enabled=False)
+
     nfp = int(plasma["nfp"])
     ntheta_p = int(inputs["ntheta_plasma"]); nzeta_p = int(inputs["nzeta_plasma"])
     ntheta_c = int(inputs["ntheta_coil"]);   nzeta_c = int(inputs["nzeta_coil"])
@@ -99,11 +105,19 @@ def build_matrices(inputs, plasma, coil):
         + (gtz * d_N_d_theta - gtt * d_N_d_zeta) / normN_safe
     ) / normN_safe
 
+    if verbose:
+        logger.phase("Initializing basis functions and f")
+    t0_basis = _time.perf_counter()
     xm, xn, basis, fx, fy, fz, flb, dphi_dtheta_basis, dphi_dzeta_basis = build_basis_and_f(
         coil["theta"], coil["zeta"], coil["rth"], coil["rze"],
         gtt, gtz, gzz, LB_dPhi_dtheta_coeff, LB_dPhi_dzeta_coeff,
         mpol_pot, ntor_pot, nfp, symmetry_option
     )
+    if sync_timing:
+        basis.block_until_ready()
+    t1_basis = _time.perf_counter()
+    if verbose:
+        logger.phase_done(float(t1_basis - t0_basis))
     nb = basis.shape[1]
 
     # Inductance and h
@@ -119,9 +133,23 @@ def build_matrices(inputs, plasma, coil):
     f_h_3TZ = net_pol * coil["rth"] - net_tor * coil["rze"]
     f_h = _flatten_TZ_to_N3(f_h_3TZ)
 
+    if verbose:
+        logger.phase("Building inductance matrix and h.")
+    t0_ind = _time.perf_counter()
     ind_eff, h_sum = inductance_and_h_sum(rP, nP, rC, nC, f_h, nfp=nfp)
+    if sync_timing:
+        h_sum.block_until_ready()
+    t1_ind = _time.perf_counter()
+    if verbose:
+        logger.phase_done(float(t1_ind - t0_ind))
 
+    t0_matmul = _time.perf_counter()
     g = (dth_c*dze_c) * (ind_eff @ basis)  # (Np,nb)
+    if sync_timing:
+        g.block_until_ready()
+    t1_matmul = _time.perf_counter()
+    if verbose:
+        logger.phase_timing("inductance*basis_functions", float(t1_matmul - t0_matmul))
     # h scaling (Fortran): h *= dth_c*dze_c*mu0/(8*pi*pi)
     h = h_sum * (dth_c*dze_c*mu0/(8.0*pi*pi))  # (Np,)
 
@@ -171,14 +199,26 @@ def build_matrices(inputs, plasma, coil):
         Bplasma = jnp.zeros_like(Bnet)
     Btarget = Bplasma + Bnet
 
+    t0_rhsB = _time.perf_counter()
     RHS_B = -(dth_p*dze_p) * (jnp.reshape(Btarget, (-1,)) @ g)  # (nb,)
+    if sync_timing:
+        RHS_B.block_until_ready()
+    t1_rhsB = _time.perf_counter()
+    if verbose:
+        logger.phase_timing("Form RHS_B", float(t1_rhsB - t0_rhsB))
 
     # Normals
     normNp = _flatten_TZ_to_N(plasma["normN"])
     normNc = _flatten_TZ_to_N(coil["normN"])
     g_over_Np = g / normNp[:,None]
 
+    t0_MB = _time.perf_counter()
     matrix_B = (dth_p*dze_p) * (g.T @ g_over_Np)  # (nb,nb)
+    if sync_timing:
+        matrix_B.block_until_ready()
+    t1_MB = _time.perf_counter()
+    if verbose:
+        logger.phase_timing("matmul for matrix_B", float(t1_MB - t0_MB))
 
     # Match regcoil_build_matrices.f90:
     #   d = (net_poloidal_current * dr/dtheta - net_toroidal_current * dr/dzeta) / (2*pi)
@@ -198,11 +238,23 @@ def build_matrices(inputs, plasma, coil):
     flb_over_Nc = flb / normNc[:, None]
 
     if reg_opt in ("chi2_k", "chi2-k"):
+        t0_reg = _time.perf_counter()
         matrix_reg = (dth_c * dze_c) * (fx.T @ fx_over_Nc + fy.T @ fy_over_Nc + fz.T @ fz_over_Nc)
         RHS_reg = (dth_c * dze_c) * (dx @ fx_over_Nc + dy @ fy_over_Nc + dz @ fz_over_Nc)
+        if sync_timing:
+            RHS_reg.block_until_ready()
+        t1_reg = _time.perf_counter()
+        if verbose:
+            logger.phase_timing("matmul for matrix_regularization", float(t1_reg - t0_reg))
     elif reg_opt in ("k_xy", "k-xy"):
+        t0_reg = _time.perf_counter()
         matrix_reg = (dth_c * dze_c) * (fx.T @ fx_over_Nc + fy.T @ fy_over_Nc)
         RHS_reg = (dth_c * dze_c) * (dx @ fx_over_Nc + dy @ fy_over_Nc)
+        if sync_timing:
+            RHS_reg.block_until_ready()
+        t1_reg = _time.perf_counter()
+        if verbose:
+            logger.phase_timing("matmul for matrix_regularization", float(t1_reg - t0_reg))
     elif reg_opt in ("k_zeta", "k-zeta", "kzeta"):
         # Regularize only the *toroidal* (zeta) component of the surface current density K.
         #
@@ -219,6 +271,7 @@ def build_matrices(inputs, plasma, coil):
         #
         # So we form a scalar basis matrix f_zeta = f · t̂_zeta and a scalar d_zeta = d · t̂_zeta,
         # and reuse the same 1/|N| weighting used throughout the Fortran implementation.
+        t0_reg = _time.perf_counter()
         t_zeta = _flatten_TZ_to_N3(coil["rze"])  # (Nc,3)
         t_norm = jnp.linalg.norm(t_zeta, axis=1)
         t_norm = jnp.where(t_norm == 0.0, 1.0, t_norm)
@@ -231,9 +284,20 @@ def build_matrices(inputs, plasma, coil):
         d_zeta = dx * tx + dy * ty + dz * tz  # (Nc,)
         matrix_reg = (dth_c * dze_c) * (f_zeta.T @ f_zeta_over_Nc)
         RHS_reg = (dth_c * dze_c) * (d_zeta @ f_zeta_over_Nc)
+        if sync_timing:
+            RHS_reg.block_until_ready()
+        t1_reg = _time.perf_counter()
+        if verbose:
+            logger.phase_timing("matmul for matrix_regularization", float(t1_reg - t0_reg))
     elif reg_opt in ("laplace-beltrami", "laplace_beltrami", "laplace beltrami"):
+        t0_reg = _time.perf_counter()
         matrix_reg = (dth_c * dze_c) * (flb.T @ flb_over_Nc)
         RHS_reg = (dth_c * dze_c) * (d_LB @ flb_over_Nc)
+        if sync_timing:
+            RHS_reg.block_until_ready()
+        t1_reg = _time.perf_counter()
+        if verbose:
+            logger.phase_timing("matmul for matrix_regularization", float(t1_reg - t0_reg))
     else:
         raise ValueError(f"Unsupported regularization_term_option={reg_opt!r}")
 
