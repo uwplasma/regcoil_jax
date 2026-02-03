@@ -9,6 +9,19 @@ Core methods
 - Merkel, P. (1987). *Solution of Stellarator Boundary Value Problems with External Currents* (NESCOIL).
   Nuclear Fusion **27** 867. DOI: 10.1088/0029-5515/27/5/018
 
+Free-space coil optimization (FOCUS / AD)
+-----------------------------------------
+
+- Zhu, C., Hudson, S. R., Song, Y., & Wan, Y. (2017).
+  *New method to design stellarator coils without the winding surface* (FOCUS).
+  Nuclear Fusion **58** 016008. DOI: 10.1088/1741-4326/aa8e0a
+- Zhu, C., Hudson, S. R., Song, Y., & Wan, Y. (2018).
+  *Designing stellarator coils by a modified Newton method using FOCUS*.
+  Plasma Physics and Controlled Fusion **60** 065012. DOI: 10.1088/1361-6587/aab8c2
+- McGreivy, N., Hudson, S. R., & Zhu, C. (2021).
+  *Optimized finite-build stellarator coils using automatic differentiation* (FOCUSADD).
+  Nuclear Fusion **61** 056024. DOI: 10.1088/1741-4326/abcd76
+
 Quadratic-constraint coil optimization
 --------------------------------------
 

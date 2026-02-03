@@ -107,6 +107,12 @@ Robust per-coil current optimization under coil misalignments (vmap + autodiff):
 python examples/3_advanced/jax_robust_optimize_cut_coil_currents_misalignment.py
 ```
 
+Optimize a global rigid coilset alignment (geometry parameters via autodiff):
+
+```bash
+python examples/3_advanced/jax_optimize_coilset_rigid_alignment.py --optimize_currents_first
+```
+
 Hybrid (few loops + many dipoles) B·n optimization + Poincaré:
 
 ```bash

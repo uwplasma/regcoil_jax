@@ -93,6 +93,19 @@ The example:
 optimizes per-coil currents to reduce the mean (and a small variance penalty) of the filament-model
 normal-field error under random per-coil rigid misalignments.
 
+Rigid alignment optimization (geometry via autodiff)
+----------------------------------------------------
+
+To show how geometry parameters can participate in autodiff optimization (without any Fortran adjoints),
+the example:
+
+``examples/3_advanced/jax_optimize_coilset_rigid_alignment.py``
+
+optimizes a small rigid-transform parameterization (rotation about :math:`z` plus translation) applied to a
+cut coil set, minimizing a normal-field error objective evaluated via a JAX Biot–Savart filament model.
+
+This is a simplified analogue of “finite-build / coil placement” sensitivity ideas explored in the FOCUS/FOCUSADD literature.
+
 Hybrid optimizations (filaments + dipoles)
 ------------------------------------------
 
