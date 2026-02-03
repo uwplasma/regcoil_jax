@@ -97,3 +97,107 @@ def soft_marching_squares_candidates(
     w = jnp.concatenate([w_t.reshape((-1,)), w_z.reshape((-1,))], axis=0)
     return pts, w
 
+
+def soft_marching_cubes_candidates(
+    *,
+    xyz_ijk3: Any,
+    phi_ijk: Any,
+    level: float,
+    alpha: float = 200.0,
+    eps: float = 1e-12,
+    periodic: tuple[bool, bool, bool] = (False, False, False),
+) -> tuple[jnp.ndarray, jnp.ndarray]:
+    """Differentiable marching-cubes-style *candidate* isosurface points on a 3D grid.
+
+    Like :func:`soft_marching_squares_candidates`, this routine is a **smooth relaxation**
+    of a discrete extractor:
+
+    - It does **not** return a connected triangle mesh (topology/branch selection is discrete).
+    - Instead it returns a weighted point cloud of *edge intersection candidates* on the
+      3D grid edges (x-, y-, and z-directed).
+
+    For each grid edge, we:
+      1) compute a linear interpolation location `t` for `phi(level)=0`,
+      2) compute the corresponding 3D point via linear interpolation of `xyz_ijk3`,
+      3) assign a smooth "crossing weight" based on whether the edge endpoints straddle the level.
+
+    Args:
+      xyz_ijk3: (nx, ny, nz, 3) grid vertex coordinates.
+      phi_ijk:  (nx, ny, nz) scalar field sampled at the same vertices.
+      level: isovalue.
+      alpha: sharpness for the smooth straddle detector (larger -> closer to hard sign test).
+      eps: stabilizer for divisions.
+      periodic: periodicity flags for (x, y, z). When True, includes edges between the last and first index.
+    Returns:
+      points: (N,3) candidate points, where N is the total number of edges considered.
+      weights: (N,) in (0,1), indicating likelihood that the edge crosses the isosurface.
+
+    This function is intended for differentiable objectives that need an isosurface proxy,
+    not for producing publication-quality meshes.
+    """
+    xyz = jnp.asarray(xyz_ijk3, dtype=jnp.float64)
+    phi = jnp.asarray(phi_ijk, dtype=jnp.float64)
+    if xyz.ndim != 4 or int(xyz.shape[3]) != 3:
+        raise ValueError("xyz_ijk3 must be (nx, ny, nz, 3)")
+    if phi.ndim != 3:
+        raise ValueError("phi_ijk must be (nx, ny, nz)")
+    if tuple(phi.shape) != tuple(xyz.shape[:3]):
+        raise ValueError("phi_ijk shape must match xyz_ijk3 first three dims")
+
+    alpha = float(alpha)
+    eps = float(eps)
+    lvl = jnp.asarray(level, dtype=jnp.float64)
+    per_x, per_y, per_z = (bool(periodic[0]), bool(periodic[1]), bool(periodic[2]))
+
+    def _edge_candidates(x0, x1, f0, f1):
+        dphi = f1 - f0
+        t = (lvl - f0) / (dphi + eps)
+        tc = jnp.clip(t, 0.0, 1.0)
+        p = (1.0 - tc)[..., None] * x0 + tc[..., None] * x1
+        prod = (f0 - lvl) * (f1 - lvl)
+        w_cross = jax.nn.sigmoid(-alpha * prod)
+        w_in = jax.nn.sigmoid(alpha * t) * jax.nn.sigmoid(alpha * (1.0 - t))
+        return p, (w_cross * w_in)
+
+    # X edges
+    if per_x:
+        x0 = xyz
+        x1 = jnp.roll(xyz, shift=-1, axis=0)
+        f0 = phi
+        f1 = jnp.roll(phi, shift=-1, axis=0)
+    else:
+        x0 = xyz[:-1, :, :, :]
+        x1 = xyz[1:, :, :, :]
+        f0 = phi[:-1, :, :]
+        f1 = phi[1:, :, :]
+    p_x, w_x = _edge_candidates(x0, x1, f0, f1)
+
+    # Y edges
+    if per_y:
+        y0 = xyz
+        y1 = jnp.roll(xyz, shift=-1, axis=1)
+        g0 = phi
+        g1 = jnp.roll(phi, shift=-1, axis=1)
+    else:
+        y0 = xyz[:, :-1, :, :]
+        y1 = xyz[:, 1:, :, :]
+        g0 = phi[:, :-1, :]
+        g1 = phi[:, 1:, :]
+    p_y, w_y = _edge_candidates(y0, y1, g0, g1)
+
+    # Z edges
+    if per_z:
+        z0 = xyz
+        z1 = jnp.roll(xyz, shift=-1, axis=2)
+        h0 = phi
+        h1 = jnp.roll(phi, shift=-1, axis=2)
+    else:
+        z0 = xyz[:, :, :-1, :]
+        z1 = xyz[:, :, 1:, :]
+        h0 = phi[:, :, :-1]
+        h1 = phi[:, :, 1:]
+    p_z, w_z = _edge_candidates(z0, z1, h0, h1)
+
+    pts = jnp.concatenate([p_x.reshape((-1, 3)), p_y.reshape((-1, 3)), p_z.reshape((-1, 3))], axis=0)
+    w = jnp.concatenate([w_x.reshape((-1,)), w_y.reshape((-1,)), w_z.reshape((-1,))], axis=0)
+    return pts, w

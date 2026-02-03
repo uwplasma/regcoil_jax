@@ -11,6 +11,10 @@ These inputs demonstrate:
 Some cases also load a BNORM file (`load_bnorm=.true.`) to include a nonzero
 `Bnormal_from_plasma_current` target field.
 
+Additional data:
+- `simsopt_vmec_cases/`: a small curated subset of `wout_*.nc` files copied from `simsopt/tests/test_files`,
+  intended for lightweight examples and tests.
+
 Larger showcase case (not CI-tested):
 - `regcoil_in.regcoilPaper_figure10d_originalAngle_loRes`: W7-X-like configuration with a NESCOIL winding surface + BNORM.
 - `regcoil_in.regcoilPaper_figure10d_geometry_option_coil_4_loRes`: same equilibrium, but with `geometry_option_coil=4` (constant-arclength theta).
@@ -35,3 +39,7 @@ Postprocess toggles:
 - Skip coil cutting: `--no_coils`
 - Skip field line tracing: `--no_fieldlines`
 - Enable Poincaré section output: `--poincare` (and set plane with `--poincare_phi0`)
+
+Additional scripts:
+- `axisymmetric_winding_surface_filament_optimization.py`: end-to-end autodiff optimization of filament coils constrained
+  to an **axisymmetric winding surface**, writing before/after figures and VTK outputs.

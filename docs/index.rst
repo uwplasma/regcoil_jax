@@ -38,6 +38,7 @@ In practice, you choose :math:`\lambda` by scanning this trade-off (or using ``g
    quadcoil_objectives
    permanent_magnets
    differentiable_coil_cutting
+   differentiable_isosurface
    differentiable_poincare
    hybrid_design
    visualization

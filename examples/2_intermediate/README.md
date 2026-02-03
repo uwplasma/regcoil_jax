@@ -33,3 +33,5 @@ Included scripts:
 - `jax_optimize_coil_radius_full_regcoil.py`: optimize `a_coil` while differentiating through matrix assembly + linear solve.
 - `jax_optimize_then_cut_coils_torus.py`: end-to-end demo (autodiff optimization → CLI solve → coil cutting → figures/VTK), all from one script.
 - `jax_optimize_cut_coil_currents_and_visualize.py`: run → cut coils → optimize a different current for each coil (autodiff through Biot–Savart) → VTK/Poincaré.
+- `differentiable_contouring_relaxations_demo.py`: toy torus + toy scalar field; compares relaxations for contour extraction.
+- `differentiable_isosurface_marching_cubes_demo.py`: 3D analogue: soft marching-cubes candidates + lightweight mesh output.

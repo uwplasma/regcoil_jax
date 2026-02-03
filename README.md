@@ -109,6 +109,18 @@ Optimize per-coil currents after cutting (autodiff through Biot–Savart):
 python examples/2_intermediate/jax_optimize_cut_coil_currents_and_visualize.py
 ```
 
+Axisymmetric winding-surface filament optimization (end-to-end autodiff on coil geometry + currents):
+
+```bash
+python examples/3_advanced/axisymmetric_winding_surface_filament_optimization.py
+```
+
+Differentiable 3D isosurface extraction (soft marching cubes candidates + lightweight visualization mesh):
+
+```bash
+python examples/2_intermediate/differentiable_isosurface_marching_cubes_demo.py
+```
+
 Robust per-coil current optimization under coil misalignments (vmap + autodiff):
 
 ```bash

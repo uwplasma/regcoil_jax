@@ -190,6 +190,35 @@ def generate_wsopt_3d(*, repo_root: Path, platform: str, opt_steps: int) -> Path
         return out
 
 
+def generate_isosurface_3d(*, repo_root: Path, platform: str) -> Path:
+    import subprocess
+
+    script = repo_root / "examples" / "2_intermediate" / "differentiable_isosurface_marching_cubes_demo.py"
+    if not script.exists():
+        raise FileNotFoundError(script)
+
+    with tempfile.TemporaryDirectory(prefix="regcoil_jax_isosurf_docs_") as td:
+        out_dir = Path(td)
+        cmd = [
+            "python",
+            str(script),
+            "--platform",
+            platform,
+            "--fast",
+            "--out_dir",
+            str(out_dir),
+        ]
+        subprocess.check_call(cmd, cwd=str(repo_root))
+
+        fig = out_dir / "figures" / "soft_marching_cubes_demo.png"
+        if not fig.exists():
+            raise FileNotFoundError(f"Expected {fig} to exist (did the example write the figure?)")
+
+        out = repo_root / "docs" / "_static" / "soft_marching_cubes_demo.png"
+        out.write_bytes(fig.read_bytes())
+        return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -202,6 +231,10 @@ def main() -> None:
     p.add_argument("--opt_steps", type=int, default=60)
     p.set_defaults(cmd="wsopt_3d")
 
+    p = sub.add_parser("isosurface_3d", help="Generate docs/_static/soft_marching_cubes_demo.png (fast)")
+    p.add_argument("--platform", type=str, default="cpu", choices=["cpu", "gpu"])
+    p.set_defaults(cmd="isosurface_3d")
+
     args = ap.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
 
@@ -212,6 +245,11 @@ def main() -> None:
 
     if args.cmd == "wsopt_3d":
         out = generate_wsopt_3d(repo_root=repo_root, platform=args.platform, opt_steps=int(args.opt_steps))
+        print(f"[ok] wrote {out}")
+        return
+
+    if args.cmd == "isosurface_3d":
+        out = generate_isosurface_3d(repo_root=repo_root, platform=args.platform)
         print(f"[ok] wrote {out}")
         return
 

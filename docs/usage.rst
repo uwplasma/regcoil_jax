@@ -70,10 +70,14 @@ Autodiff / Optimization demos
 Two examples highlight “JAX-native” workflows:
 
 - :ex:`examples/2_intermediate/jax_optimize_coil_minor_radius.py`: differentiable toy optimization (fast).
+- :ex:`examples/2_intermediate/differentiable_isosurface_marching_cubes_demo.py`: differentiable 3D isosurface *candidates*
+  (soft marching cubes) plus a lightweight visualization mesh (marching tetrahedra).
 - :ex:`examples/3_advanced/jax_optimize_separation_vmec_offset.py`: optimizes the VMEC offset-surface ``separation`` parameter
   by differentiating through surface construction, matrix build, and the linear solve.
 - :ex:`examples/3_advanced/winding_surface_autodiff_optimize_and_visualize.py`: optimizes a *spatially varying* ``separation(θ,ζ)``
   field, then runs and visualizes REGCOIL “before” and “after”.
+- :ex:`examples/3_advanced/axisymmetric_winding_surface_filament_optimization.py`: optimize *filament coils directly* on an
+  **axisymmetric winding surface**, jointly updating coil geometry and per-coil currents with autodiff.
 
 Geometry-option examples
 ------------------------

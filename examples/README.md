@@ -99,6 +99,19 @@ original Fortran REGCOIL distribution:
   python examples/3_advanced/differentiable_coil_cutting_softcontour.py
   ```
 
+- Axisymmetric winding-surface filament optimization: optimize filament coils directly on a *circular* axisymmetric winding surface,
+  jointly updating coil geometry and per-coil currents via autodiff, writing before/after figures and VTK:
+
+  ```bash
+  python examples/3_advanced/axisymmetric_winding_surface_filament_optimization.py
+  ```
+
+- Differentiable 3D isosurface extraction (toy): soft marching-cubes-style candidates (JAX) and a lightweight mesh for ParaView:
+
+  ```bash
+  python examples/2_intermediate/differentiable_isosurface_marching_cubes_demo.py
+  ```
+
 - Differentiable multi-coil cutting (topology-fixed): optimize smooth θ_k(ζ) curves to satisfy Φ-level constraints,
   then tune per-coil currents (end-to-end differentiable filament geometry):
 

@@ -57,6 +57,12 @@ Coils and postprocessing
 .. automodule:: regcoil_jax.vtk_io
    :members:
 
+.. automodule:: regcoil_jax.diff_isosurface
+   :members:
+
+.. automodule:: regcoil_jax.isosurface_numpy
+   :members:
+
 Optimization and autodiff workflows
 -----------------------------------
 
