@@ -16,8 +16,8 @@ Can contour cutting be “fully topology-robust and differentiable”?
 
 Not in the strict mathematical sense across all inputs:
 
-- The mapping :math:`\\Phi \\mapsto \\{(\\theta,\\zeta): \\Phi(\\theta,\\zeta)=\\Phi_0\\}` is *set-valued*.
-- Topology changes (splits/merges) occur at critical points where :math:`\\nabla\\Phi=0` and are inherently discrete.
+- The mapping :math:`\Phi \mapsto \{(\theta,\zeta): \Phi(\theta,\zeta)=\Phi_0\}` is *set-valued*.
+- Topology changes (splits/merges) occur at critical points where :math:`\nabla\Phi=0` and are inherently discrete.
 - Any algorithm that returns a *specific* discrete coil set must make branch/topology decisions, which are not smooth.
 
 What *is* possible (and useful in practice) is to choose a differentiable surrogate that **fixes topology by construction**
@@ -95,6 +95,42 @@ If you need differentiable geometry extraction beyond this toy relaxation, a few
 - Discrete / sparse coil representations (e.g. “wireframe”/polyline methods) and alternate winding-surface
   parameterizations that avoid contouring, which can be more naturally compatible with autodiff.
 
+Implicit differentiation via root finding (implemented)
+-------------------------------------------------------
+
+For the common special case where a chosen contour is *single-valued* (one :math:`\theta` per :math:`\zeta`),
+you can define coil geometry implicitly by the scalar equation:
+
+.. math::
+
+   F(\theta;\zeta) = \Phi(\zeta,\theta) - \Phi_0 = 0.
+
+For each :math:`\zeta` sample, we solve this with a fixed-iteration Newton method in the forward pass, but compute
+gradients using the implicit-function theorem (IFT) rather than differentiating through the Newton iterations.
+
+Implementation:
+
+- :src:`regcoil_jax/diff_coil_cutting.py` (``implicit_contour_theta_of_zeta`` and ``implicit_coil_polyline_xyz``)
+
+This is still **not** a general “topology-robust differentiable contouring” algorithm: it fixes topology by construction
+(one branch) and requires careful initialization to select the desired branch.
+
+Soft marching-squares candidates (implemented)
+----------------------------------------------
+
+If you want an even more “geometry-extraction-like” surrogate, this repo also provides a differentiable,
+marching-squares-inspired relaxation that returns a **weighted point cloud** of candidate edge intersections,
+rather than a discrete polyline:
+
+- :src:`regcoil_jax/diff_isosurface.py` (``soft_marching_squares_candidates``)
+
+This can be used inside autodiff-based objectives as a smooth proxy for a contour *density*. It does **not**
+solve the topology problem (connecting candidates into a globally consistent set of curves is still discrete).
+
+Toy demo script:
+
+- :ex:`examples/2_intermediate/differentiable_contouring_relaxations_demo.py`
+
 References
 ----------
 
@@ -110,9 +146,9 @@ exact contouring is to *fix the topology* (fix the number of coils) and optimize
 Representation
 --------------
 
-Represent each coil by a periodic angle curve :math:`\\theta_k(\\zeta)` sampled on the :math:`\\zeta` grid. The
+Represent each coil by a periodic angle curve :math:`\theta_k(\zeta)` sampled on the :math:`\zeta` grid. The
 curve is mapped to XYZ points on the winding surface by interpolating the winding-surface mesh
-:math:`\\mathbf{r}(\\theta,\\zeta)` at :math:`(\\theta_k(\\zeta),\\zeta)`.
+:math:`\mathbf{r}(\theta,\zeta)` at :math:`(\theta_k(\zeta),\zeta)`.
 
 Level-set relaxation
 --------------------
@@ -121,16 +157,16 @@ Instead of discrete contour extraction, enforce the contour constraint by least 
 
 .. math::
 
-   \\Phi(\\zeta,\\theta_k(\\zeta)) \\approx \\Phi_k,
+   \Phi(\zeta,\theta_k(\zeta)) \approx \Phi_k,
 
-where :math:`\\Phi_k` is a chosen contour level (often uniformly spaced in a normalized potential).
+where :math:`\Phi_k` is a chosen contour level (often uniformly spaced in a normalized potential).
 
 Regularization and topology robustness
 --------------------------------------
 
-To obtain well-behaved coils and avoid collisions in :math:`(\\theta,\\zeta)` coordinates, we add:
+To obtain well-behaved coils and avoid collisions in :math:`(\theta,\zeta)` coordinates, we add:
 
-- a smoothness penalty on wrapped differences :math:`\\Delta\\theta_k(\\zeta)`,
+- a smoothness penalty on wrapped differences :math:`\Delta\theta_k(\zeta)`,
 - a soft repulsion penalty between coil curves.
 
 This approach is **topology-robust** in the sense that topology is fixed by construction: the number of coils does
@@ -139,7 +175,7 @@ not change, and no discrete split/merge logic is needed.
 Implementation
 --------------
 
-- Objective on :math:`\\theta_k(\\zeta)`: ``regcoil_jax.diff_coil_cutting.coil_curves_objective``
+- Objective on :math:`\theta_k(\zeta)`: ``regcoil_jax.diff_coil_cutting.coil_curves_objective``
 - XYZ mapping: ``regcoil_jax.diff_coil_cutting.coil_curves_polyline_xyz``
 - JAX Biot–Savart on polylines (no NumPy preprocessing): ``regcoil_jax.diff_coil_cutting.bnormal_from_coil_curves``
 

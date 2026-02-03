@@ -72,6 +72,14 @@ with
 
 depending on the symmetry option.
 
+.. figure:: _static/current_potential_example.png
+   :alt: Example current potential on the winding surface
+   :width: 820
+
+The current potential :math:`\Phi(\theta,\zeta)` is the primary REGCOIL output: coils are typically obtained as
+contours of :math:`\Phi`, and the winding-surface surface current density is
+:math:`\mathbf{K} = \hat{\mathbf{n}}\times \nabla \Phi` (see below).
+
 The derivatives used throughout are
 
 .. math::
@@ -317,19 +325,19 @@ The field line ODE (in arclength-like parameter :math:`s`) is:
 
 .. math::
 
-   \\frac{d\\mathbf{x}}{ds} = \\pm\\frac{\\mathbf{B}(\\mathbf{x})}{\\lVert\\mathbf{B}(\\mathbf{x})\\rVert}.
+   \frac{d\mathbf{x}}{ds} = \pm\frac{\mathbf{B}(\mathbf{x})}{\lVert\mathbf{B}(\mathbf{x})\rVert}.
 
 In this repository:
 
-- the Biot–Savart field :math:`\\mathbf{B}` for filament segments is implemented in JAX in :src:`regcoil_jax/biot_savart_jax.py`,
+- the Biot–Savart field :math:`\mathbf{B}` for filament segments is implemented in JAX in :src:`regcoil_jax/biot_savart_jax.py`,
 - fixed-step RK4 field line integration is implemented in JAX in :src:`regcoil_jax/fieldlines_jax.py`.
 
-Exact Poincaré section extraction finds crossings of :math:`\\phi=\\phi_0\\; (\\mathrm{mod}\\;2\\pi/N_{fp})`, which is discrete.
+Exact Poincaré section extraction finds crossings of :math:`\phi=\phi_0\; (\mathrm{mod}\;2\pi/N_{fp})`, which is discrete.
 For differentiable optimization, we instead use a *soft section weight* for each sampled point:
 
 .. math::
 
-   w = \\exp\\left(-\\left(\\frac{\\sin(N_{fp}(\\phi-\\phi_0))}{\\sigma}\\right)^2\\right),
+   w = \exp\left(-\left(\frac{\sin(N_{fp}(\phi-\phi_0))}{\sigma}\right)^2\right),
 
 and build differentiable statistics (e.g. weighted means in :math:`(R,Z)`).
 

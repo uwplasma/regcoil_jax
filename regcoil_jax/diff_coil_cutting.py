@@ -123,6 +123,132 @@ def soft_contour_theta_of_zeta(
     return th_est
 
 
+def _dphi_dtheta_central(*, phi_zt: jnp.ndarray, theta: jnp.ndarray) -> jnp.ndarray:
+    """Central-difference dΦ/dθ on a uniform periodic theta grid.
+
+    Args:
+      phi_zt: (nzeta, ntheta)
+      theta: (ntheta,) uniform grid in [0, 2π)
+    Returns:
+      dphi_dtheta_zt: (nzeta, ntheta)
+    """
+    phi = jnp.asarray(phi_zt, dtype=jnp.float64)
+    th = jnp.asarray(theta, dtype=jnp.float64).reshape((-1,))
+    if phi.ndim != 2:
+        raise ValueError("phi_zt must be (nzeta, ntheta)")
+    if th.ndim != 1 or int(th.shape[0]) != int(phi.shape[1]):
+        raise ValueError("theta must be (ntheta,) matching phi_zt.shape[1]")
+    ntheta = int(phi.shape[1])
+    dt = 2.0 * jnp.pi / float(ntheta)
+    return (jnp.roll(phi, shift=-1, axis=1) - jnp.roll(phi, shift=1, axis=1)) / (2.0 * dt)
+
+
+@jax.custom_vjp
+def implicit_contour_theta_of_zeta(
+    phi_zt: Any,
+    theta: Any,
+    level: Any,
+) -> jnp.ndarray:
+    """Implicit (root-finding) θ(ζ) for Φ(ζ,θ)=level with custom implicit gradients.
+
+    This routine targets a *single-valued* contour branch θ(ζ) by solving, for each ζ index,
+
+    .. math::
+
+       F(\\theta;\\zeta) = \\Phi(\\zeta,\\theta) - \\mathrm{level} = 0.
+
+    It uses a fixed-iteration Newton method in the forward pass, and in the backward pass
+    uses the implicit-function theorem (IFT) rather than differentiating through the iterations.
+
+    This is useful when you want a differentiable “contour extraction” that is closer to exact
+    than :func:`soft_contour_theta_of_zeta`, while still acknowledging the fundamental topology issues
+    discussed in ``docs/differentiable_coil_cutting.rst``.
+
+    Notes:
+      - Topology is still fixed by construction (one θ per ζ). Branch selection depends on the initial guess.
+      - Gradients can become large when |∂Φ/∂θ| is small (near critical points).
+
+    Args:
+      phi_zt: (nzeta, ntheta) sampled on uniform theta grid
+      theta: (ntheta,) uniform grid in [0,2π)
+      level: scalar level value (float or 0D array)
+      This function uses fixed hyperparameters (Newton iterations and damping) chosen for stability.
+      If you need to tune these for research experiments, implement a local wrapper that calls
+      :func:`implicit_contour_theta_of_zeta` on preconditioned/scaled fields and uses a tuned initial guess.
+    Returns:
+      theta_z: (nzeta,) in [0, 2π)
+    """
+    theta_z, _ = _implicit_contour_fwd(phi_zt, theta, level)
+    return theta_z
+
+
+def _implicit_contour_fwd(
+    phi_zt: Any,
+    theta: Any,
+    level: Any,
+) -> tuple[jnp.ndarray, tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, float]]:
+    # Fixed hyperparameters (chosen to be reasonably stable across the repo's demos).
+    maxiter = 40
+    newton_damping = 1.0
+    eps = 1e-12
+    beta_init = 2e4
+    phi = jnp.asarray(phi_zt, dtype=jnp.float64)
+    th = jnp.asarray(theta, dtype=jnp.float64).reshape((-1,))
+    lvl = jnp.asarray(level, dtype=jnp.float64)
+    if phi.ndim != 2:
+        raise ValueError("phi_zt must be (nzeta, ntheta)")
+    if th.ndim != 1 or int(th.shape[0]) != int(phi.shape[1]):
+        raise ValueError("theta must be (ntheta,) matching phi_zt.shape[1]")
+    if lvl.ndim != 0:
+        raise ValueError("level must be a scalar (0D array or float)")
+
+    # Differentiable initial guess, but stop gradients through it (branch choice is not a smooth function).
+    th0 = soft_contour_theta_of_zeta(phi_zt=phi, theta=th, level=float(lvl), beta=float(beta_init))
+    th0 = jax.lax.stop_gradient(th0)
+
+    dphi_dtheta_zt = _dphi_dtheta_central(phi_zt=phi, theta=th)
+
+    def newton_step(_i: int, theta_z: jnp.ndarray) -> jnp.ndarray:
+        phi_at = _interp_theta_periodic(f_zt=phi, theta=th, theta_query=theta_z)
+        dphi_at = _interp_theta_periodic(f_zt=dphi_dtheta_zt, theta=th, theta_query=theta_z)
+        F = phi_at - lvl
+        denom = dphi_at + float(eps) * jnp.sign(dphi_at)
+        step = (float(newton_damping)) * (F / denom)
+        theta_z = jnp.mod(theta_z - step, 2.0 * jnp.pi)
+        return theta_z
+
+    theta_z = jax.lax.fori_loop(0, int(maxiter), newton_step, th0)
+
+    # Cache values needed for the IFT backward pass.
+    dphi_at = _interp_theta_periodic(f_zt=dphi_dtheta_zt, theta=th, theta_query=theta_z)
+    return theta_z, (phi, th, theta_z, dphi_at, float(lvl))
+
+
+def _implicit_contour_bwd(
+    res: tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, float], gtheta: jnp.ndarray
+) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    phi, th, theta_z, dphi_at, lvl = res
+
+    # IFT: for each ζ, F(θ,Φ)=0 => dθ = -(F_Φ/F_θ) dΦ.
+    # Reverse-mode: gΦ = -F_Φ^T (gθ / F_θ).
+    denom = dphi_at
+    denom = jnp.where(jnp.abs(denom) > 1e-14, denom, jnp.sign(denom) * 1e-14 + 1e-14)
+    adj_F = jnp.asarray(gtheta, dtype=jnp.float64) / denom
+
+    def interp_phi(phi_in: jnp.ndarray) -> jnp.ndarray:
+        return _interp_theta_periodic(f_zt=phi_in, theta=th, theta_query=theta_z) - lvl
+
+    _, vjp_fun = jax.vjp(interp_phi, phi)
+    gphi = -vjp_fun(adj_F)[0]
+
+    # level: F = interp(phi) - level, so dθ/dlevel = 1/F_θ.
+    glevel = jnp.sum(jnp.asarray(gtheta, dtype=jnp.float64) / denom)
+    return gphi, jnp.zeros_like(th), glevel
+
+
+implicit_contour_theta_of_zeta.defvjp(_implicit_contour_fwd, _implicit_contour_bwd)
+
+
 def bilinear_interp_periodic_zt3(
     *,
     r_zt3: Any,
@@ -206,6 +332,32 @@ def soft_coil_polyline_xyz(
     if r.shape[0] != phi.shape[0] or r.shape[1] != phi.shape[1]:
         raise ValueError("r_coil_zt3 must have shape (nzeta,ntheta,3) matching phi_zt")
     th_est = soft_contour_theta_of_zeta(phi_zt=phi, theta=th_grid, level=float(level), beta=float(beta))
+    # Use the grid zeta positions (one point per zeta index).
+    zq = ze_grid
+    pts = bilinear_interp_periodic_zt3(r_zt3=r, theta=th_grid, zeta=ze_grid, query_theta=th_est, query_zeta=zq, nfp=int(nfp))
+    return pts
+
+
+def implicit_coil_polyline_xyz(
+    *,
+    phi_zt: Any,
+    theta: Any,
+    zeta: Any,
+    r_coil_zt3: Any,
+    level: Any,
+    nfp: int,
+) -> jnp.ndarray:
+    """Differentiable polyline (nzeta,3) from an implicit contour θ(ζ) root solve."""
+    phi = jnp.asarray(phi_zt, dtype=jnp.float64)
+    th_grid = jnp.asarray(theta, dtype=jnp.float64)
+    ze_grid = jnp.asarray(zeta, dtype=jnp.float64)
+    r = jnp.asarray(r_coil_zt3, dtype=jnp.float64)
+    if phi.ndim != 2:
+        raise ValueError("phi_zt must be (nzeta, ntheta)")
+    if r.shape[0] != phi.shape[0] or r.shape[1] != phi.shape[1]:
+        raise ValueError("r_coil_zt3 must have shape (nzeta,ntheta,3) matching phi_zt")
+
+    th_est = implicit_contour_theta_of_zeta(phi, th_grid, level)
     # Use the grid zeta positions (one point per zeta index).
     zq = ze_grid
     pts = bilinear_interp_periodic_zt3(r_zt3=r, theta=th_grid, zeta=ze_grid, query_theta=th_est, query_zeta=zq, nfp=int(nfp))

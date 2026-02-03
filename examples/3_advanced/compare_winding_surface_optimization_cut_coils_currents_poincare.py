@@ -540,8 +540,8 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
     ax.semilogx(run_b["lambdas"], run_b["max_K"], "-o", label="baseline max_K")
     ax.semilogx(run_a["lambdas"], run_a["max_K"], "-o", label="wsopt max_K")
-    ax.set_xlabel(r"$\\lambda$")
-    ax.set_ylabel(r"$\\max |K|$")
+    ax.set_xlabel(r"$\lambda$")
+    ax.set_ylabel(r"$\max |K|$")
     ax.set_title("Lambda scan comparison")
     ax.legend(loc="best")
     fig.tight_layout()
@@ -568,6 +568,52 @@ def main() -> None:
     fig.suptitle("Coil-only field lines (after per-coil current optimization)")
     fig.tight_layout()
     fig.savefig(fig_dir / "poincare_compare.png")
+    plt.close(fig)
+
+    # 3D summary (baseline vs optimized winding surface):
+    # plasma surface point cloud + cut coils + a few traced field lines.
+    # This figure is intentionally matplotlib-only (no ParaView required).
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
+    def _plot_3d(ax, *, run: dict[str, np.ndarray], result: dict[str, Any], vis: dict[str, Any], title: str) -> None:
+        r = np.asarray(run["r_plasma"], dtype=float).reshape(-1, 3)
+        stride = max(1, int(r.shape[0] // 7000))
+        rp = r[::stride]
+        ax.scatter(rp[:, 0], rp[:, 1], rp[:, 2], s=0.25, alpha=0.06, c="k", linewidths=0)
+
+        for I, coil in zip(result["currents_opt"], result["cut"].filaments_xyz):
+            c = "tab:red" if float(I) >= 0.0 else "tab:blue"
+            coil = np.asarray(coil, dtype=float)
+            ax.plot(coil[:, 0], coil[:, 1], coil[:, 2], color=c, linewidth=1.2, alpha=0.9)
+
+        for ln in vis["lines"]:
+            ln = np.asarray(ln, dtype=float)
+            ax.plot(ln[:, 0], ln[:, 1], ln[:, 2], color="tab:green", linewidth=0.6, alpha=0.45)
+
+        ax.set_title(title)
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
+        ax.set_zlabel("z [m]")
+        ax.set_box_aspect([1.0, 1.0, 0.8])
+
+    fig = plt.figure(figsize=(12.6, 5.6), constrained_layout=True)
+    ax0 = fig.add_subplot(1, 2, 1, projection="3d")
+    ax1 = fig.add_subplot(1, 2, 2, projection="3d")
+    _plot_3d(
+        ax0,
+        run=run_b,
+        result=b,
+        vis=vis_b,
+        title=f"Baseline winding surface\nBn_rms={b['rms_opt']:.2e}, max|Bn|={b['max_opt']:.2e}",
+    )
+    _plot_3d(
+        ax1,
+        run=run_a,
+        result=a,
+        vis=vis_a,
+        title=f"Optimized winding surface\nBn_rms={a['rms_opt']:.2e}, max|Bn|={a['max_opt']:.2e}",
+    )
+    fig.savefig(fig_dir / "wsopt_3d_before_after.png", dpi=220)
     plt.close(fig)
 
     print(f"[done] outputs: {out_dir}")

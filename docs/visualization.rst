@@ -25,6 +25,22 @@ It writes:
 - ``figures_<case>/``: PNG figures (lambda scan, 2D maps of :math:`B_n`, :math:`|K|`, and :math:`\\Phi`)
 - ``vtk_<case>/``: ParaView-readable ``.vtp`` PolyData files
 
+Example 3D summary figure
+-------------------------
+
+The end-to-end VMEC demo :ex:`examples/3_advanced/compare_winding_surface_optimization_cut_coils_currents_poincare.py`
+also writes a single “paper-style” 3D overview figure that overlays:
+
+- a plasma surface point cloud,
+- the cut filament coils (colored by current sign),
+- a few traced coil-only field lines,
+
+both **before** and **after** winding-surface optimization.
+
+.. figure:: _static/wsopt_3d_before_after.png
+   :alt: 3D overview of coils and field lines (before/after winding surface optimization)
+   :width: 950
+
 Optimization example figures
 ----------------------------
 
@@ -68,10 +84,10 @@ Cutting coils (filament extraction)
 -----------------------------------
 
 REGCOIL represents the coil currents as a surface current density
-:math:`\\mathbf{K} = \\mathbf{n} \\times \\nabla \\Phi` on a winding surface.
+:math:`\mathbf{K} = \mathbf{n} \times \nabla \Phi` on a winding surface.
 
 To obtain discrete filament coils, a standard approach is to take contours of the total current potential
-:math:`\\Phi(\\theta,\\zeta)`.
+:math:`\Phi(\theta,\zeta)`.
 
 This repository includes a small implementation in :src:`regcoil_jax/coil_cutting.py` and exposes it through
 the postprocessing script above, which also writes a MAKECOIL-style ``coils.<case>`` file.
@@ -115,8 +131,8 @@ See also:
 Poincaré sections
 -----------------
 
-The postprocessing script can also extract a Poincaré section at a fixed toroidal angle :math:`\\phi_0`
-(mod :math:`2\\pi/N_{fp}`)::
+The postprocessing script can also extract a Poincaré section at a fixed toroidal angle :math:`\phi_0`
+(mod :math:`2\pi/N_{fp}`)::
 
   python examples/3_advanced/postprocess_make_figures_and_vtk.py --run \\
     --input examples/3_advanced/regcoil_in.lambda_search_1 \\

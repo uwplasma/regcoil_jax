@@ -12,7 +12,7 @@ Goals:
 
 Example outputs (from `examples/1_simple/regcoil_in.compareToMatlab1`):
 
-![lambda scan](docs/_static/lambda_scan_example.png)
+![lambda scan](docs/_static/lambda_scan_rich.png)
 
 ![current potential](docs/_static/current_potential_example.png)
 
@@ -37,11 +37,19 @@ Notes:
 
 ## Install
 
-Editable install for development:
+Clone the repository, then install from the repo root:
 
 ```bash
-pip install -e '.[dev]'
+git clone https://github.com/uwplasma/regcoil_jax.git
+cd regcoil_jax
+pip install .
 ```
+
+Optional extras:
+
+- Plotting / ParaView (VTK) postprocessing: `pip install '.[viz]'`
+- Docs build: `pip install '.[docs]'`
+- Development: `pip install -e '.[dev]'`
 
 ## Quickstart (CLI)
 

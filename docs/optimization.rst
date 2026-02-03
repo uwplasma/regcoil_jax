@@ -119,14 +119,14 @@ It optimizes:
 - a small set of filament-loop currents, and
 - many dipole moments,
 
-to minimize :math:`B\\cdot n` on a target surface, then generates ParaView outputs and Poincaré plots.
+to minimize :math:`B\cdot n` on a target surface, then generates ParaView outputs and Poincaré plots.
 
 See also :doc:`hybrid_design` for the dipole equations and objective definition.
 
 Quadcoil-style objectives (coil spacing / length from ∇Φ)
 ---------------------------------------------------------------
 
-Some coil-quality metrics can be computed directly from the winding-surface current potential :math:`\\Phi(\\theta,\\zeta)`
+Some coil-quality metrics can be computed directly from the winding-surface current potential :math:`\Phi(\theta,\zeta)`
 and its surface gradient, without explicitly cutting coils. This makes them convenient for:
 
 - diagnostics during lambda scans, and
@@ -142,7 +142,7 @@ Permanent magnets (dipole lattices)
 -----------------------------------
 
 Permanent magnets (or small coillets) can be modeled as a lattice of point dipoles placed on / near
-the winding surface, with their moments optimized to cancel :math:`B_{\\mathrm{plasma}}\\cdot n` or other targets.
+the winding surface, with their moments optimized to cancel :math:`B_{\mathrm{plasma}}\cdot n` or other targets.
 
 See:
 
@@ -154,7 +154,7 @@ Differentiable coil cutting (research demo)
 ------------------------------------------------
 
 Coil cutting via exact contour extraction is non-differentiable. This repo includes a **pedagogic**
-relaxation based on soft contour extraction (single-valued :math:`\\theta(\\zeta)`), intended for
+relaxation based on soft contour extraction (single-valued :math:`\theta(\zeta)`), intended for
 research and experimentation:
 
 - :doc:`differentiable_coil_cutting`
